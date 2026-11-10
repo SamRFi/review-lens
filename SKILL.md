@@ -1,5 +1,5 @@
 ---
-name: review-page
+name: review-lens
 description: Review a code change with the user through a local, offline HTML review page (flow map + lenses with depth levels + exact code from git). Use after implementing a non-trivial change, when the user asks to review a commit, branch or uncommitted work, and whenever the user pastes a request starting with "Review <id> ·" (a lens/level request) or "Review <id>: decisions".
 ---
 
@@ -17,7 +17,7 @@ requests, discussion and decisions. Nothing is uploaded: the page and its data s
 
 ## Where things live
 
-- Tools: `~/.claude/skills/review-page/scripts/` (`build.py`, `diff_source.py`, `template.html`).
+- Tools: `~/.claude/skills/review-lens/scripts/` (`build.py`, `diff_source.py`, `template.html`).
 - Reviews: `~/.claude/reviews/<repo-folder-name>/<id>/content.json` → `review.html` next to it.
   `<id>` is short and stable, e.g. `2026-11-10-invoice-rounding` or `a1b2c3d-invoice-rounding`.
 - Never write review files into the repository. Never commit them.
@@ -28,7 +28,7 @@ requests, discussion and decisions. Nothing is uploaded: the page and its data s
    changes. Unrelated changes go under `unrelated` with a reason; they are never reviewed or touched.
 2. **Slice the change into nodes** that follow the runtime flow (see *Slicing*), and write
    `content.json` (format: `reference/content-format.md`).
-3. **Build:** `python ~/.claude/skills/review-page/scripts/build.py <content.json>`
+3. **Build:** `python ~/.claude/skills/review-lens/scripts/build.py <content.json>`
    It must exit 0. It refuses when a changed line belongs to no node, when a step or note points at
    nothing, or when a changed file is neither reviewed nor declared unrelated. Fix the content, never
    the check.
