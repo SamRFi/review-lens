@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+:root {
+  --bg: #f7f5f0; --panel: #ffffff; --ink: #2b2a27; --muted: #77736a; --line: #e4e0d6;
+  --accent: #3d7a6e; --accent-soft: #dcefe9; --warn: #b7791f; --warn-soft: #fbefd9;
+  --info: #3b6ea8; --info-soft: #e1ebf7; --ok: #3d7a4a; --ok-soft: #e1f0e3;
+  --add: #e6f4e9; --del: #fbe7e6; --step: #fff2b8; --step-edge: #e0b400;
+  --note: #eef3fb; --note-edge: #3b6ea8;
+  --code-bg: #fbfaf7; --kw: #8a3ea8; --str: #a3521c; --com: #6f8a6f;
+  --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1b1c1e; --panel: #232427; --ink: #e7e4dc; --muted: #9a968c; --line: #35363a;
+    --accent: #6fbfae; --accent-soft: #23403b; --warn: #e2a84a; --warn-soft: #3d311c;
+    --info: #7fa8dc; --info-soft: #1f2e40; --ok: #7cc48a; --ok-soft: #1f3524;
+    --add: #1d3324; --del: #3d2323; --step: #4a4220; --step-edge: #d4b23a;
+    --note: #1f2a38; --note-edge: #7fa8dc;
+    --code-bg: #1e1f22; --kw: #c99ae0; --str: #e0a473; --com: #84a184;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1b1c1e; --panel: #232427; --ink: #e7e4dc; --muted: #9a968c; --line: #35363a;
+  --accent: #6fbfae; --accent-soft: #23403b; --warn: #e2a84a; --warn-soft: #3d311c;
+  --info: #7fa8dc; --info-soft: #1f2e40; --ok: #7cc48a; --ok-soft: #1f3524;
+  --add: #1d3324; --del: #3d2323; --step: #4a4220; --step-edge: #d4b23a;
+  --note: #1f2a38; --note-edge: #7fa8dc;
+  --code-bg: #1e1f22; --kw: #c99ae0; --str: #e0a473; --com: #84a184;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { display: flex; flex-direction: column; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, "Segoe UI", sans-serif; }
+code { font-family: var(--mono); font-size: .9em; background: var(--accent-soft); padding: 0 .3em; border-radius: 4px; }
+button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: .3em .8em; }
+button:hover { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+button.link { border: none; background: none; padding: 0; color: var(--info); text-decoration: underline; font-size: .85em; }
+
+header { display: flex; flex-wrap: wrap; gap: .6rem 1rem; align-items: center; padding: .7rem 1rem; border-bottom: 1px solid var(--line); background: var(--panel); }
+header > div:first-child { min-width: 0; flex: 1 1 320px; }
+header h1 { font-size: 1.05rem; margin: 0; }
+header .sub { color: var(--muted); font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header .spacer { flex: 0; }
+.progress { display: flex; gap: .5rem; font-size: .85rem; color: var(--muted); }
+.progress b { color: var(--ink); }
+
+main { display: grid; grid-template-columns: 360px minmax(320px, 430px) 1fr; flex: 1; min-height: 0; }
+@media (max-width: 1100px) { main { grid-template-columns: 1fr; height: auto; } .col { max-height: none !important; } }
+.col { overflow: auto; border-right: 1px solid var(--line); max-height: 100%; }
+.col-map { padding: .8rem; }
+.col-explain { padding: 1rem; background: var(--panel); }
+.col-code { background: var(--code-bg); }
+
+/* map */
+svg.map { width: 100%; height: auto; display: block; }
+.node rect { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; rx: 10; }
+.node { cursor: pointer; transition: opacity .2s; }
+.node.unvisited { opacity: .5; }
+.node.unvisited rect { stroke-dasharray: 3 3; }
+.node.context rect { fill: var(--bg); }
+.node.test rect { fill: var(--info-soft); }
+.node.current rect { stroke: var(--accent); stroke-width: 3; }
+.node.hover rect { stroke: var(--step-edge); stroke-width: 3; }
+.node.accepted rect { fill: var(--ok-soft); }
+.node.flagged rect { fill: var(--warn-soft); }
+.node text { fill: var(--ink); font-size: 12.5px; }
+.node .num { font-weight: 700; fill: var(--accent); }
+.node .nsub { fill: var(--muted); font-size: 10.5px; }
+.node .badge { font-size: 13px; }
+.edge { stroke: var(--muted); stroke-width: 1.4; fill: none; }
+.edge.proves { stroke-dasharray: 4 4; stroke: var(--info); }
+.edge-label { fill: var(--muted); font-size: 10px; }
+.legend { font-size: .8rem; color: var(--muted); margin-top: .5rem; line-height: 1.7; }
+.legend .k { display: inline-block; min-width: 1.4em; }
+.tour { margin-top: .8rem; display: flex; gap: .5rem; flex-wrap: wrap; }
+
+/* explanation */
+.crumb { font-size: .8rem; color: var(--muted); margin-bottom: .3rem; word-break: break-all; }
+h2 { font-size: 1.15rem; margin: 0 0 .6rem; }
+.core { display: grid; gap: .35rem; border: 1px solid var(--line); border-radius: 10px; padding: .6rem .75rem; margin-bottom: .8rem; background: var(--bg); font-size: .9rem; }
+.core div b { display: inline-block; min-width: 5.2em; color: var(--muted); font-weight: 600; }
+.tabs { display: flex; gap: .3rem; flex-wrap: wrap; margin-bottom: .5rem; }
+.tabs button.on { background: var(--accent-soft); border-color: var(--accent); }
+.tabs .dots { font-size: .6rem; letter-spacing: 1px; margin-left: .35em; color: var(--accent); vertical-align: middle; }
+.levels { display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; margin: .2rem 0 .6rem; font-size: .85rem; }
+.levels button { padding: .1em .6em; font-size: .8rem; }
+.levels button.on { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.levels button.unwritten { border-style: dashed; color: var(--muted); }
+.levels button.on.unwritten { color: var(--panel); }
+.levels .desc { color: var(--muted); margin-left: .3rem; }
+.lens-intro { color: var(--muted); font-size: .9rem; margin: 0 0 .6rem; }
+.step { border-left: 3px solid var(--step-edge); padding: .5rem .7rem; background: var(--step); border-radius: 0 8px 8px 0; margin: .4rem 0; }
+.step.past { background: none; border-left-color: var(--line); color: var(--muted); cursor: pointer; }
+.step-nav { display: flex; align-items: center; gap: .5rem; margin: .6rem 0; }
+.step-nav .count { color: var(--muted); font-size: .85rem; flex: 1; }
+.risk { border-radius: 8px; padding: .5rem .7rem; margin: .45rem 0; font-size: .92rem; }
+.risk h4 { margin: 0 0 .2rem; font-size: .9rem; }
+.risk.warn { background: var(--warn-soft); } .risk.warn h4 { color: var(--warn); }
+.risk.info, .risk.assume { background: var(--info-soft); } .risk.info h4, .risk.assume h4 { color: var(--info); }
+.risk.ok { background: var(--ok-soft); } .risk.ok h4 { color: var(--ok); }
+.risk .tag { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; opacity: .8; margin-right: .4em; }
+.notelist { list-style: none; padding: 0; margin: 0; }
+.notelist li { padding: .35rem .5rem; border-left: 3px solid var(--note-edge); background: var(--note); border-radius: 0 6px 6px 0; margin: .3rem 0; cursor: pointer; font-size: .9rem; }
+.notelist li small { color: var(--muted); }
+.ask { border: 1px dashed var(--line); border-radius: 10px; padding: .7rem; margin: .4rem 0; }
+.ask p { margin: 0 0 .5rem; }
+.ask textarea, .decide textarea { width: 100%; min-height: 3.2em; font: inherit; border: 1px solid var(--line); border-radius: 8px; padding: .4rem; background: var(--bg); color: var(--ink); }
+.deeper { margin-top: .7rem; }
+.decide { margin-top: 1rem; border-top: 1px solid var(--line); padding-top: .8rem; }
+.decide .row { display: flex; gap: .35rem; flex-wrap: wrap; }
+.decide button.on { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.decide textarea { margin-top: .5rem; }
+.intro p { margin: .3rem 0 .8rem; }
+.intro ol { padding-left: 1.2rem; margin: .3rem 0 .8rem; }
+.intro h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 1rem 0 .2rem; }
+pre.cmd { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: .5rem; font: 12px/1.45 var(--mono); white-space: pre-wrap; word-break: break-all; }
+table.cov { width: 100%; border-collapse: collapse; font-size: .85rem; }
+table.cov td, table.cov th { border-bottom: 1px solid var(--line); padding: .3rem .2rem; text-align: left; vertical-align: top; }
+
+/* right-click level menu */
+.menu { position: fixed; z-index: 10; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.18); padding: .3rem; min-width: 260px; }
+.menu .mh { font-size: .75rem; color: var(--muted); padding: .2rem .5rem; text-transform: uppercase; letter-spacing: .05em; }
+.menu button { display: block; width: 100%; text-align: left; border: none; border-radius: 6px; padding: .35rem .5rem; font-size: .88rem; }
+.menu button:hover { background: var(--accent-soft); }
+.menu button small { color: var(--muted); }
+
+/* code */
+.filetabs { position: sticky; top: 0; z-index: 2; display: flex; gap: .3rem; flex-wrap: wrap; padding: .5rem; background: var(--panel); border-bottom: 1px solid var(--line); }
+.filetabs button { font-size: .8rem; padding: .15em .6em; }
+.filetabs button.on { background: var(--accent-soft); border-color: var(--accent); }
+.filepath { font: 12px var(--mono); color: var(--muted); padding: .4rem .7rem; }
+.code { font: 12.5px/1.55 var(--mono); padding-bottom: 40vh; }
+.ln { display: grid; grid-template-columns: 2.2em 3.2em 3.2em 1.2em 1fr; white-space: pre; transition: opacity .15s; }
+.ln:hover { outline: 1px solid var(--step-edge); cursor: pointer; }
+.ln .g { color: var(--muted); text-align: right; padding-right: .5em; user-select: none; }
+.ln .who { color: var(--accent); text-align: center; font-weight: 700; user-select: none; }
+.ln .s { padding-right: 1rem; overflow-wrap: anywhere; white-space: pre-wrap; }
+.ln.add { background: var(--add); } .ln.del { background: var(--del); }
+.ln.hunk { color: var(--muted); background: var(--bg); font-style: italic; }
+.code.focus .ln { opacity: .38; }
+.code.focus .ln.in, .code.focus .ln.noted { opacity: 1; }
+.ln.noted { box-shadow: inset 4px 0 0 var(--note-edge); }
+.ln.stepline { box-shadow: inset 4px 0 0 var(--step-edge); opacity: 1 !important; }
+.ln.stepline .s { background: var(--step); }
+.callout { font: 13.5px/1.5 system-ui, "Segoe UI", sans-serif; margin: .5rem .7rem .2rem 7.6em; padding: .45rem .7rem; background: var(--note); border-left: 3px solid var(--note-edge); border-radius: 0 8px 8px 0; }
+.callout b.h { display: block; color: var(--info); font-size: .85rem; }
+.callout.flash { outline: 2px solid var(--step-edge); }
+.tk-kw { color: var(--kw); } .tk-str { color: var(--str); } .tk-com { color: var(--com); font-style: italic; }
+.toast { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: .5rem 1rem; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw; }
+.toast.on { opacity: .95; }
+.copybox { width: 100%; min-height: 6em; font: 12px var(--mono); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1 id="title"></h1>
+    <div class="sub" id="subtitle"></div>
+  </div>
+  <div class="spacer"></div>
+  <div class="progress" id="progress"></div>
+  <button id="btnOverview">Overview</button>
+  <button id="btnCoverage">Coverage</button>
+  <button id="btnCopy" class="primary">Copy decisions for chat</button>
+  <button id="btnTheme" title="Toggle theme">◐</button>
+</header>
+<main>
+  <section class="col col-map">
+    <svg class="map" id="map" viewBox="0 0 354 480" role="img" aria-label="Flow map of the change"></svg>
+    <div class="tour">
+      <button id="btnTour" class="primary">▶ Guided tour</button>
+      <button id="btnReset" title="Forget visited and decisions">Reset</button>
+    </div>
+    <div class="legend">
+      <span class="k">◌</span> not visited yet &nbsp; <span class="k">✓</span> accepted &nbsp; <span class="k">⚠</span> needs your decision &nbsp; <span class="k">↺</span> reopened<br>
+      Dashed box: unchanged context &nbsp; Blue: tests<br>
+      Lens dots <b>●○○</b>: levels written so far · right-click a lens to jump to a level<br>
+      Keys: <b>←</b>/<b>→</b> step · <b>↑</b>/<b>↓</b> node
+    </div>
+  </section>
+  <section class="col col-explain" id="explain"></section>
+  <section class="col col-code" id="codecol"></section>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const DATA = __DATA__;
+const NODE_W = 152, NODE_H = 54, MAX_LEVEL = 3;
+const nodesById = Object.fromEntries(DATA.nodes.map(n => [n.id, n]));
+const revOf = n => n.rev || 1;
+// A decision only counts for the node revision it was made on.
+function decisionOf(n) {
+  const d = state.decisions[n.id];
+  if (!d || !d.status) return { note: d && d.note };
+  return (d.rev || 1) === revOf(n) ? d : { status: "reopened", note: d.note };
+}
+const lensById = Object.fromEntries(DATA.lenses.map(l => [l.id, l]));
+const tourOrder = DATA.nodes.map(n => n.id);
+
+// ---- persisted state (per viewer, best effort) ----
+function load() {
+  try { return JSON.parse(localStorage.getItem(DATA.meta.storageKey)) || {}; } catch { return {}; }
+}
+function save() {
+  try { localStorage.setItem(DATA.meta.storageKey, JSON.stringify({ visited: state.visited, decisions: state.decisions })); } catch {}
+}
+const saved = load();
+const state = {
+  current: null, step: 0, lens: "flow", level: 1, showAll: false, file: null, view: "overview",
+  visited: saved.visited || {}, decisions: saved.decisions || {}, hoverNode: null,
+};
+
+// ---- lens content ----
+// Flow and Risk level 1 come from the node itself; every other level is written on request.
+function lensLevel(node, lensId, level) {
+  if (lensId === "flow" && level === 1) return { steps: node.flow };
+  if (lensId === "risk" && level === 1) return { items: node.risks };
+  return ((node.lenses || {})[lensId] || {})[level] || null;
+}
+function writtenLevels(node, lensId) {
+  const out = [];
+  for (let l = 1; l <= MAX_LEVEL; l++) if (lensLevel(node, lensId, l)) out.push(l);
+  return out;
+}
+function highestWritten(node, lensId) { const w = writtenLevels(node, lensId); return w.length ? w[w.length - 1] : 1; }
+function currentContent() { const n = nodesById[state.current]; return n ? lensLevel(n, state.lens, state.level) : null; }
+
+// ---- helpers ----
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const inR = (r, v) => r && v >= r[0] && v <= r[1];
+const fileName = k => DATA.files[k].path.split("/").pop();
+function lineKey(l) { return l.t === "del" ? "o" + l.o : (l.n !== undefined ? "n" + l.n : null); }
+function covers(spec, fileKey, l) {
+  if (spec.f !== fileKey || l.t === "hunk") return false;
+  if (l.t === "del") return inR(spec.o, l.o);
+  return inR(spec.n, l.n);
+}
+function rangeText(spec) {
+  const side = spec.o ? "o" : "n", r = spec[side];
+  const plural = r[1] !== r[0] ? "s" : "";
+  return `${fileName(spec.f)} ${side === "o" ? "removed " : ""}line${plural} ${r[0]}${plural ? "–" + r[1] : ""}`;
+}
+function ownerOf(fileKey, l) { return DATA.nodes.find(n => n.cover.some(c => covers(c, fileKey, l))); }
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast.timer); toast.timer = setTimeout(() => t.classList.remove("on"), 2200); }
+async function copy(text, label) {
+  try { await navigator.clipboard.writeText(text); toast(label || "Copied. Paste it into Claude Code."); }
+  catch {
+    // file:// pages may not get clipboard access; show the text so it can be copied by hand
+    $("explain").insertAdjacentHTML("afterbegin", `<p>Clipboard unavailable. Copy this:</p><textarea class="copybox">${esc(text)}</textarea>`);
+  }
+}
+function lensRequest(node, lensId, level, focus, unclear) {
+  const lens = lensById[lensId];
+  let text = `Review ${DATA.meta.id} · ${node.num} ${node.label} · Lens: ${lens.name} · Level ${level} (${lens.levels[level - 1]}). Please write it into the review page.`;
+  if (focus) text += `\nFocus: "${focus.h}" (${rangeText(focus)})`;
+  if (unclear && unclear.trim()) text += `\nWhat's unclear: ${unclear.trim()}`;
+  return text;
+}
+const LANGS = {
+  cs: { line: "//", kw: "var new return public private protected internal static sealed abstract override virtual class record struct interface enum using namespace if else foreach for while in is null true false const int string bool async await yield break continue void params readonly checked this base throw try catch finally switch case default out ref get set init" },
+  js: { line: "//", kw: "const let var function return if else for of in while new class extends import export from default async await try catch finally throw this null undefined true false switch case break continue typeof instanceof" },
+  sql: { line: "--", ci: true, kw: "select from where join inner left right outer cross apply on and or not null is in exists insert into values update set delete merge create alter drop table view procedure function as order by group having union all distinct top case when then else end begin commit rollback transaction declare exec with nolock" },
+  py: { line: "#", kw: "def return if elif else for in while import from as class with try except finally raise None True False and or not is lambda yield pass break continue async await" },
+  ps1: { line: "#", ci: true, kw: "function param if else elseif foreach for while return try catch finally throw switch begin process end" },
+};
+const LANG_BY_EXT = { cs: "cs", js: "js", mjs: "js", cjs: "js", ts: "js", tsx: "js", jsx: "js", vue: "js", sql: "sql", py: "py", ps1: "ps1", psm1: "ps1" };
+const langRegex = {};
+function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"); }
+function highlight(src, path) {
+  const lang = LANG_BY_EXT[path.split(".").pop().toLowerCase()];
+  if (!lang) return esc(src);
+  if (!langRegex[lang]) {
+    const L = LANGS[lang];
+    const strings = `"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*'`;
+    langRegex[lang] = new RegExp(`(${escapeRegex(L.line)}.*$)|(${strings})|\\b(${L.kw.split(" ").join("|")})\\b`, L.ci ? "gi" : "g");
+  }
+  const re = langRegex[lang];
+  re.lastIndex = 0;
+  let out = "", last = 0, m;
+  while ((m = re.exec(src))) {
+    if (!m[0]) { re.lastIndex++; continue; }
+    out += esc(src.slice(last, m.index));
+    const cls = m[1] ? "tk-com" : m[2] ? "tk-str" : "tk-kw";
+    out += `<span class="${cls}">${esc(m[0])}</span>`;
+    last = m.index + m[0].length;
+  }
+  return out + esc(src.slice(last));
+}
+
+// ---- map ----
+function drawMap() {
+  const svg = $("map");
+  svg.setAttribute("viewBox", `0 0 354 ${DATA.meta.mapHeight}`);
+  const mid = (n, side) => {
+    const [x, y] = n.pos;
+    return { top: [x + NODE_W / 2, y], bottom: [x + NODE_W / 2, y + NODE_H], left: [x, y + NODE_H / 2], right: [x + NODE_W, y + NODE_H / 2] }[side];
+  };
+  let html = `<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor" style="color:var(--muted)"/></marker></defs>`;
+  for (const [a, b, label] of DATA.edges) {
+    const na = nodesById[a], nb = nodesById[b];
+    const vertical = na.pos[0] === nb.pos[0];
+    const p1 = vertical ? mid(na, "bottom") : mid(na, "left"), p2 = vertical ? mid(nb, "top") : mid(nb, "right");
+    html += `<path class="edge" d="M${p1[0]},${p1[1]} L${p2[0]},${p2[1]}" marker-end="url(#arr)"/>`;
+    if (label) html += `<text class="edge-label" x="${(p1[0] + p2[0]) / 2 + (vertical ? 6 : 0)}" y="${(p1[1] + p2[1]) / 2 + (vertical ? 4 : 16)}" text-anchor="${vertical ? "start" : "middle"}">${label}</text>`;
+  }
+  for (const t of DATA.nodes.filter(n => n.proves)) {
+    const target = nodesById[t.proves[t.proves.length - 1]];
+    const p1 = mid(t, "left"), p2 = mid(target, "right");
+    html += `<path class="edge proves" d="M${p1[0]},${p1[1]} L${p2[0]},${p2[1]}"/>`;
+  }
+  for (const n of DATA.nodes) {
+    const d = decisionOf(n);
+    const cls = ["node", n.kind, state.visited[n.id] ? "" : "unvisited", state.current === n.id ? "current" : "",
+      state.hoverNode === n.id ? "hover" : "", d && d.status === "accepted" ? "accepted" : "",
+      d && (d.status === "question" || d.status === "change" || d.status === "reopened") ? "flagged" : ""].join(" ");
+    const badge = d && d.status === "accepted" ? "✓" : d && d.status === "skipped" ? "↷" : d && d.status === "deferred" ? "⏸"
+      : d && d.status === "reopened" ? "↺" : d && (d.status === "question" || d.status === "change") ? "✎" : (n.decision ? "⚠" : (state.visited[n.id] ? "" : "◌"));
+    const [x, y] = n.pos;
+    html += `<g class="${cls}" data-node="${n.id}" tabindex="0">
+      <rect x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" ${n.kind === "context" ? 'stroke-dasharray="5 4"' : ""}/>
+      <text x="${x + 9}" y="${y + 21}"><tspan class="num">${n.num}</tspan> ${esc(n.label.length > 21 ? n.label.slice(0, 20) + "…" : n.label)}</text>
+      <text class="nsub" x="${x + 9}" y="${y + 40}">${esc(n.sub)}</text>
+      <text class="badge" x="${x + NODE_W - 18}" y="${y + 40}">${badge}</text>
+      <title>${esc(n.label)}</title></g>`;
+  }
+  svg.innerHTML = html;
+  svg.querySelectorAll(".node").forEach(g => {
+    g.addEventListener("click", () => selectNode(g.dataset.node));
+    g.addEventListener("keydown", e => { if (e.key === "Enter") selectNode(g.dataset.node); });
+  });
+}
+
+// ---- code panel ----
+function filesOf(node) {
+  const content = lensLevel(node, state.lens, state.level) || {};
+  const specs = [...node.flow, ...node.cover, ...(content.steps || []), ...(content.notes || [])];
+  return [...new Set(specs.map(s => s.f))];
+}
+function drawCode() {
+  const col = $("codecol");
+  const node = state.current && nodesById[state.current];
+  const fileKeys = node ? filesOf(node) : Object.keys(DATA.files);
+  if (!state.file || !fileKeys.includes(state.file)) state.file = fileKeys[0];
+  const f = DATA.files[state.file];
+  const content = node ? currentContent() || {} : {};
+  const step = content.steps ? content.steps[state.step] : null;
+  const notes = (content.notes || []).map((nt, i) => ({ ...nt, i })).filter(nt => nt.f === state.file);
+  const placed = new Set();
+  let html = `<div class="filetabs">${fileKeys.map(k => `<button data-file="${k}" class="${k === state.file ? "on" : ""}">${esc(fileName(k))}</button>`).join("")}</div>`;
+  html += `<div class="filepath">${esc(f.path)}${f.kind === "context" ? " · unchanged, shown for context" : ""}</div>`;
+  html += `<div class="code ${node ? "focus" : ""}">`;
+  for (const l of f.lines) {
+    if (l.t === "hunk") { html += `<div class="ln hunk"><span class="g"></span><span class="g"></span><span class="g"></span><span></span><span class="s">${esc(l.s)}</span></div>`; continue; }
+    // a note's callout sits just above the first line it explains
+    for (const nt of notes) {
+      if (!placed.has(nt.i) && covers(nt, state.file, l)) {
+        placed.add(nt.i);
+        html += `<div class="callout" id="note-${nt.i}"><b class="h">${esc(nt.h)}</b>${nt.t}
+          <div><button class="link" data-deeper-note="${nt.i}">deeper here ↗</button></div></div>`;
+      }
+    }
+    const owner = ownerOf(state.file, l);
+    const isIn = node && (node.cover.some(c => covers(c, state.file, l)) || node.flow.some(s => covers(s, state.file, l)));
+    const isNoted = notes.some(nt => covers(nt, state.file, l));
+    const isStep = step && covers(step, state.file, l);
+    const mark = l.t === "add" ? "+" : l.t === "del" ? "−" : "";
+    html += `<div class="ln ${l.t} ${isIn ? "in" : ""} ${isNoted ? "noted" : ""} ${isStep ? "stepline" : ""}" data-key="${lineKey(l)}" data-owner="${owner ? owner.id : ""}">
+      <span class="who">${owner ? owner.num : ""}</span><span class="g">${l.o ?? ""}</span><span class="g">${l.n ?? ""}</span><span class="g">${mark}</span><span class="s">${highlight(l.s, f.path) || " "}</span></div>`;
+  }
+  html += `</div>`;
+  col.innerHTML = html;
+  col.querySelectorAll(".filetabs button").forEach(b => b.addEventListener("click", () => { state.file = b.dataset.file; drawCode(); }));
+  col.querySelectorAll(".ln[data-owner]").forEach(el => {
+    el.addEventListener("mouseenter", () => { state.hoverNode = el.dataset.owner || null; drawMap(); });
+    el.addEventListener("mouseleave", () => { state.hoverNode = null; drawMap(); });
+    el.addEventListener("click", () => jumpToLine(el.dataset.owner, el.dataset.key));
+  });
+  col.querySelectorAll("[data-deeper-note]").forEach(b => b.addEventListener("click", () => {
+    const nt = content.notes[+b.dataset.deeperNote];
+    const next = Math.min(state.level + 1, MAX_LEVEL);
+    copy(lensRequest(node, state.lens, next, nt), `Request for ${lensById[state.lens].name} level ${next} on "${nt.h}" copied.`);
+  }));
+  const target = col.querySelector(".ln.stepline") || col.querySelector(".callout") || col.querySelector(".ln.in");
+  if (target) scrollCodeTo(target, Math.round(col.clientHeight / 4));
+}
+function jumpToLine(ownerId, key) {
+  if (!ownerId) return;
+  const node = nodesById[ownerId];
+  const side = key[0], num = +key.slice(1);
+  const idx = node.flow.findIndex(s => s.f === state.file && inR(s[side], num));
+  selectNode(ownerId, idx >= 0 ? idx : 0, state.file);
+}
+function scrollToNote(i) {
+  const nt = currentContent().notes[i];
+  if (state.file !== nt.f) { state.file = nt.f; drawCode(); }
+  const el = $("note-" + i);
+  if (!el) return;
+  scrollCodeTo(el, 20);
+  el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 900);
+}
+// Scrolls the code panel so `el` sits `gap` px below the sticky file tabs.
+// Measured relative to the panel itself, so it doesn't depend on the page layout.
+function scrollCodeTo(el, gap) {
+  const col = $("codecol");
+  const tabs = col.querySelector(".filetabs");
+  const tabsHeight = tabs ? tabs.offsetHeight : 0;
+  col.scrollTop += el.getBoundingClientRect().top - col.getBoundingClientRect().top - tabsHeight - gap;
+}
+
+// ---- explanation panel ----
+function drawExplain() {
+  const el = $("explain");
+  if (state.view === "coverage") return drawCoverage(el);
+  const node = state.current && nodesById[state.current];
+  if (!node) return drawOverview(el);
+  const d = decisionOf(node);
+  const lens = lensById[state.lens];
+  const content = lensLevel(node, state.lens, state.level);
+  const fileList = [...new Set([...node.flow, ...node.cover].map(s => fileName(s.f)))].join(" · ");
+
+  let html = `<div class="crumb">${esc(fileList)}</div>
+    <h2>${node.num} ${esc(node.label)}</h2>
+    <div class="core"><div><b>Change</b> ${node.core.change}</div><div><b>Risk</b> ${node.core.risk}</div><div><b>Evidence</b> ${node.core.evidence}</div></div>
+    <div class="tabs">${DATA.lenses.map(l => {
+      const w = writtenLevels(node, l.id);
+      const dots = Array.from({ length: MAX_LEVEL }, (_, i) => w.includes(i + 1) ? "●" : "○").join("");
+      return `<button data-lens="${l.id}" class="${state.lens === l.id ? "on" : ""}" title="Right-click to jump to a level">${l.name}${l.id === "risk" && node.decision ? " ⚠" : ""}<span class="dots">${dots}</span></button>`;
+    }).join("")}</div>
+    <div class="levels">${Array.from({ length: MAX_LEVEL }, (_, i) => i + 1).map(l => {
+      const written = !!lensLevel(node, state.lens, l);
+      return `<button data-level="${l}" class="${l === state.level ? "on" : ""} ${written ? "" : "unwritten"}">L${l}${written ? "" : " ↗"}</button>`;
+    }).join("")}<span class="desc">${esc(lens.levels[state.level - 1])}</span></div>`;
+
+  if (!content) {
+    html += `<div class="ask"><p><b>${lens.name} level ${state.level}</b> isn't written yet for this node: <i>${esc(lens.levels[state.level - 1])}</i>.</p>
+      <textarea id="unclear" placeholder="What's unclear? (optional, helps aim the answer)"></textarea>
+      <p style="margin-top:.5rem"><button id="askBtn" class="primary">Copy request for chat ↗</button></p>
+      <p style="color:var(--muted);font-size:.85rem">Paste it into Claude Code. When it's written into the page, refresh (F5). Your progress is kept.</p></div>`;
+  } else {
+    if (content.intro) html += `<p class="lens-intro">${content.intro}</p>`;
+    if (content.steps) html += renderSteps(node, content.steps);
+    if (content.items) html += content.items.map(r => `<div class="risk ${r.lvl}"><h4><span class="tag">${{ warn: "watch", info: "note", assume: "assumption", ok: "fine" }[r.lvl]}</span>${esc(r.h)}</h4>${r.t}</div>`).join("");
+    if (content.notes) html += `<ul class="notelist">${content.notes.map((nt, i) => `<li data-note="${i}"><b>${esc(nt.h)}</b><br><small>${esc(rangeText(nt))}</small></li>`).join("")}</ul>`;
+    if (content.text) html += `<div>${content.text}</div>`;
+    if (state.level < MAX_LEVEL) {
+      const nextWritten = !!lensLevel(node, state.lens, state.level + 1);
+      html += `<div class="deeper"><button id="deeperBtn">${nextWritten ? "Deeper ↓ (level " + (state.level + 1) + ")" : "Deeper ↓ ask for level " + (state.level + 1) + " ↗"}</button></div>`;
+    } else {
+      html += `<p class="lens-intro" style="margin-top:.7rem">This is the deepest level. Beyond this, ask in chat with a specific question.</p>`;
+    }
+  }
+  if (d.status === "reopened") html += `<div class="risk warn"><h4>↺ Reopened</h4>The code of this node changed after your decision. Please look again and decide.</div>`;
+  html += `<div class="decide"><div class="row">
+      ${[["accepted", "✓ Accept"], ["question", "? Question"], ["change", "✎ Change"], ["deferred", "⏸ Defer"], ["skipped", "↷ Skip"]]
+        .map(([k, label]) => `<button data-decide="${k}" class="${d.status === k ? "on" : ""}">${label}</button>`).join("")}
+    </div>
+    <textarea id="note" placeholder="Optional note. Questions and change requests go to chat via 'Copy decisions'.">${esc(d.note || "")}</textarea></div>`;
+  el.innerHTML = html;
+
+  el.querySelectorAll("[data-lens]").forEach(b => {
+    b.addEventListener("click", () => setLens(b.dataset.lens, highestWritten(node, b.dataset.lens)));
+    b.addEventListener("contextmenu", e => { e.preventDefault(); openLevelMenu(node, b.dataset.lens, e.clientX, e.clientY); });
+  });
+  el.querySelectorAll("[data-level]").forEach(b => b.addEventListener("click", () => setLens(state.lens, +b.dataset.level)));
+  el.querySelectorAll("[data-note]").forEach(li => li.addEventListener("click", () => scrollToNote(+li.dataset.note)));
+  el.querySelectorAll("[data-step]").forEach(b => b.addEventListener("click", () => { state.step = +b.dataset.step; render(); }));
+  el.querySelectorAll("[data-decide]").forEach(b => b.addEventListener("click", () => {
+    const cur = decisionOf(node);
+    state.decisions[node.id] = { note: cur.note, status: cur.status === b.dataset.decide ? null : b.dataset.decide, rev: revOf(node) };
+    save(); render();
+  }));
+  $("note").addEventListener("input", e => { state.decisions[node.id] = { ...(state.decisions[node.id] || {}), note: e.target.value }; save(); });
+  const ask = $("askBtn");
+  if (ask) ask.addEventListener("click", () => copy(lensRequest(node, state.lens, state.level, null, $("unclear").value)));
+  const deeper = $("deeperBtn");
+  if (deeper) deeper.addEventListener("click", () => setLens(state.lens, state.level + 1));
+  const prev = $("prev"), next = $("next"), all = $("toggleAll");
+  if (prev) prev.addEventListener("click", stepBack);
+  if (next) next.addEventListener("click", stepForward);
+  if (all) all.addEventListener("click", () => { state.showAll = !state.showAll; render(); });
+}
+function renderSteps(node, steps) {
+  let html = "";
+  if (state.showAll) {
+    html += steps.map((s, i) => `<div class="step ${i === state.step ? "" : "past"}" data-step="${i}">${s.t}</div>`).join("");
+  } else {
+    html += steps.slice(0, state.step).map((s, i) => `<div class="step past" data-step="${i}">${s.t}</div>`).join("");
+    html += `<div class="step">${steps[state.step].t}</div>`;
+  }
+  const last = state.step === steps.length - 1;
+  const nextNode = tourOrder[tourOrder.indexOf(node.id) + 1];
+  return html + `<div class="step-nav">
+    <button id="prev" ${state.step === 0 ? "disabled" : ""}>←</button>
+    <span class="count">step ${state.step + 1} of ${steps.length}</span>
+    <button id="toggleAll">${state.showAll ? "One at a time" : "Show all"}</button>
+    ${last ? (nextNode ? `<button id="next" class="primary">Next: ${nodesById[nextNode].num} →</button>` : "") : `<button id="next" class="primary">→</button>`}
+  </div>`;
+}
+function drawOverview(el) {
+  const i = DATA.intro;
+  el.innerHTML = `<div class="intro">
+    <h2>${esc(DATA.meta.subject)}</h2>
+    ${i.before ? `<h3>Before</h3><p>${i.before}</p>` : ""}
+    ${i.after ? `<h3>After</h3><p>${i.after}</p>` : ""}
+    ${i.example ? `<h3>${esc(i.exampleTitle || "One example, step by step")}</h3><ol>${i.example.map(e => `<li>${e}</li>`).join("")}</ol>` : ""}
+    <h3>How to use this page</h3>
+    <p>Click a node on the map, or press <b>▶ Guided tour</b>. The code on the right lights up for that node, and the number in the code margin tells you which node each line belongs to. Hover a line to see its node on the map.</p>
+    <p>Each lens (Flow, Risk, Syntax, Architecture, Context) has up to three levels. The dots show which levels are written. Click <b>Deeper ↓</b> to go one level further, or right-click a lens to jump straight to a level.
+    A level that isn't written yet gives you a request to paste into Claude Code. It then gets written into this page, and you refresh.</p>
+    ${i.verification ? `<h3>Verification</h3><p>${i.verification}</p>` : ""}
+    ${(i.commands || []).map(c => `<pre class="cmd">${esc(c)}</pre>`).join("")}
+  </div>`;
+}
+function drawCoverage(el) {
+  const rows = DATA.coverage.map(c => `<tr><td title="${esc(c.path)}">${esc(c.path.split("/").pop())}</td><td>${c.changed}</td><td>${c.nodes.join(" ")}</td>
+    <td>${c.binary ? "binary, not shown" : c.uncovered.length ? "⚠ " + c.uncovered.join(", ") : "✓ all"}</td></tr>`).join("");
+  const contextFiles = Object.values(DATA.files).filter(f => f.kind === "context").map(f => esc(f.path.split("/").pop()));
+  const unrelated = (DATA.unrelated || []).map(u => `<li><code>${esc(u.pattern)}</code>: ${esc(u.reason)}</li>`).join("");
+  const total = DATA.coverage.reduce((a, c) => a + c.changed, 0);
+  el.innerHTML = `<h2>Coverage</h2>
+    <p>Every added or removed line in the commit, and the node that explains it. Checked by the page generator, not by hand.</p>
+    <table class="cov"><tr><th>File</th><th>Changed lines</th><th>Nodes</th><th>Explained</th></tr>${rows}</table>
+    <p style="color:var(--muted);font-size:.85rem">${total} changed lines in ${DATA.coverage.length} files.${contextFiles.length ? " Unchanged context shown: " + contextFiles.join(", ") + "." : ""}</p>
+    ${unrelated ? `<h3 style="font-size:.95rem">Not part of this review</h3><p style="font-size:.85rem;color:var(--muted)">Changes in the working tree that belong to other work, left untouched:</p><ul style="font-size:.85rem">${unrelated}</ul>` : ""}
+    <p style="font-size:.8rem;color:var(--muted)">Built ${esc(DATA.meta.built)} from ${esc(DATA.meta.source)} · diff ${DATA.meta.fingerprint.slice(0, 12)}</p>`;
+}
+
+// ---- right-click level menu ----
+function closeMenu() { document.querySelectorAll(".menu").forEach(m => m.remove()); }
+function openLevelMenu(node, lensId, x, y) {
+  closeMenu();
+  const lens = lensById[lensId];
+  const menu = document.createElement("div");
+  menu.className = "menu";
+  menu.innerHTML = `<div class="mh">${esc(lens.name)} · jump to level</div>` + lens.levels.map((desc, i) => {
+    const l = i + 1, written = !!lensLevel(node, lensId, l);
+    return `<button data-menu-level="${l}">L${l} · ${esc(desc)} <small>${written ? "written" : "ask ↗"}</small></button>`;
+  }).join("");
+  document.body.appendChild(menu);
+  menu.style.left = Math.min(x, innerWidth - menu.offsetWidth - 8) + "px";
+  menu.style.top = Math.min(y, innerHeight - menu.offsetHeight - 8) + "px";
+  menu.querySelectorAll("[data-menu-level]").forEach(b => b.addEventListener("click", () => {
+    const l = +b.dataset.menuLevel;
+    closeMenu();
+    setLens(lensId, l);
+    // an unwritten level is requested straight away, so one right-click is enough
+    if (!lensLevel(node, lensId, l)) copy(lensRequest(node, lensId, l), `Request for ${lens.name} level ${l} copied. Paste it into Claude Code.`);
+  }));
+}
+document.addEventListener("click", e => { if (!e.target.closest(".menu")) closeMenu(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
+
+// ---- navigation ----
+function setLens(lensId, level) {
+  state.lens = lensId; state.level = level; state.step = 0; state.showAll = false;
+  const node = nodesById[state.current], c = lensLevel(node, lensId, level);
+  const first = c && ((c.steps || [])[0] || (c.notes || [])[0]);
+  if (first) state.file = first.f;
+  render();
+}
+function selectNode(id, step = 0, file = null) {
+  state.view = "node"; state.current = id; state.step = step; state.lens = "flow"; state.level = 1; state.showAll = false;
+  state.visited[id] = true; save();
+  const s = nodesById[id].flow[step];
+  state.file = file || (s && s.f) || null;
+  render();
+}
+function stepForward() {
+  const node = nodesById[state.current], steps = (currentContent() || {}).steps;
+  if (steps && state.step < steps.length - 1) { state.step++; state.file = steps[state.step].f; render(); }
+  else { const n = tourOrder[tourOrder.indexOf(node.id) + 1]; if (n) selectNode(n); }
+}
+function stepBack() {
+  const steps = (currentContent() || {}).steps;
+  if (steps && state.step > 0) { state.step--; state.file = steps[state.step].f; render(); }
+}
+function progress() {
+  const total = DATA.nodes.length;
+  const visited = DATA.nodes.filter(n => state.visited[n.id]).length;
+  const decided = DATA.nodes.filter(n => { const s = decisionOf(n).status; return s && s !== "reopened"; }).length;
+  const open = DATA.nodes.filter(n => n.decision && !["accepted", "deferred", "skipped", "change", "question"].includes(decisionOf(n).status)).length;
+  const reopened = DATA.nodes.filter(n => decisionOf(n).status === "reopened").length;
+  $("progress").innerHTML = `<span><b>${visited}</b>/${total} explored</span><span><b>${decided}</b>/${total} decided</span>${open ? `<span>⚠ <b>${open}</b> open decision</span>` : ""}${reopened ? `<span>↺ <b>${reopened}</b> reopened</span>` : ""}`;
+}
+function render() { drawMap(); drawExplain(); drawCode(); progress(); }
+
+function decisionsText() {
+  const label = { reopened: "↺ reopened (code changed since decision)", accepted: "✓ accepted", question: "? question", change: "✎ change requested", deferred: "⏸ deferred", skipped: "↷ skipped" };
+  const lines = [`Review ${DATA.meta.id}: decisions (diff ${DATA.meta.fingerprint.slice(0, 8)})`];
+  for (const n of DATA.nodes) {
+    const d = decisionOf(n);
+    lines.push(`${n.num} ${n.label}: ${d.status ? label[d.status] : "no decision yet"}${d.note ? `\n   note: ${d.note.replace(/\n/g, "\n   ")}` : ""}`);
+  }
+  return lines.join("\n");
+}
+
+$("title").textContent = DATA.meta.title;
+$("subtitle").title = $("subtitle").textContent = `${DATA.meta.subject} · ${DATA.meta.source} · built ${DATA.meta.built} · diff ${DATA.meta.fingerprint.slice(0, 8)}`;
+$("btnOverview").addEventListener("click", () => { state.view = "overview"; state.current = null; render(); });
+$("btnCoverage").addEventListener("click", () => { state.view = "coverage"; state.current = null; render(); });
+$("btnCopy").addEventListener("click", () => copy(decisionsText(), "Decisions copied. Paste them into Claude Code."));
+$("btnTour").addEventListener("click", () => selectNode(tourOrder[0]));
+$("btnReset").addEventListener("click", () => { if (confirm("Forget visited nodes and decisions?")) { state.visited = {}; state.decisions = {}; save(); render(); } });
+$("btnTheme").addEventListener("click", () => {
+  const r = document.documentElement, dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const now = r.dataset.theme || (dark ? "dark" : "light");
+  r.dataset.theme = now === "dark" ? "light" : "dark";
+});
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "TEXTAREA" || !state.current) return;
+  const i = tourOrder.indexOf(state.current);
+  if (e.key === "ArrowRight") stepForward();
+  else if (e.key === "ArrowLeft") stepBack();
+  else if (e.key === "ArrowDown" && tourOrder[i + 1]) selectNode(tourOrder[i + 1]);
+  else if (e.key === "ArrowUp" && tourOrder[i - 1]) selectNode(tourOrder[i - 1]);
+  else return;
+  e.preventDefault();
+});
+render();
+</script>
+</body>
+</html>
