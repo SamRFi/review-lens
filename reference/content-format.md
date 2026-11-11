@@ -69,3 +69,8 @@ A level body may combine: `intro` (one or two sentences), `steps` (stepper, high
 `notes` (callouts above exact lines, each with "deeper here"), `items` (risk-style cards), `text`
 (free HTML). Flow L1 and Risk L1 come from the node's `flow` and `risks`; don't repeat them under
 `lenses`.
+
+A level written only for some lines (a scoped request) also has `"partial": true` and
+`"scope": "invoice.py lines 9–10"` (human-readable). The page shows it as ◐ and offers to ask for
+the whole node. Its answers must be `notes` whose ranges overlap the requested lines, so the page
+can find them when the same lines are right-clicked again.

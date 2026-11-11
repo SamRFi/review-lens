@@ -87,9 +87,16 @@ requests, discussion and decisions. Nothing is uploaded: the page and its data s
 The page copies requests to the clipboard; the user pastes them into chat.
 
 **`Review <id> · <node> · Lens: <lens> · Level <n> (...)`**, optionally with `Focus:` (a specific
-note and line range) and `What's unclear:`:
+note and line range), `Scope:` (only these lines, from a right-clicked line, step or code
+selection), `Selected code:` and `What's unclear:`:
 1. Open that review's `content.json`, add `nodes[i].lenses.<lens>.<n>`, aimed at the focus and
    the unclear part when given.
+   - **With `Scope:`** answer only for those lines, as `notes` attached to them (a note's range must
+     overlap the scope, or the page won't find it). If that level didn't exist yet, create it with
+     `"partial": true` and `"scope": "<the scope text>"`. If it already was partial, add the notes
+     and extend `scope`. If it was complete, just add the notes. When `Selected code:` names an
+     expression, explain that expression, not the whole line.
+   - **Without `Scope:`** write the level for the whole node and remove `partial`/`scope`.
 2. Rebuild (must exit 0).
 3. Reply in **one line**: what was added, and "refresh the page (F5)". Don't put the explanation
    in chat.

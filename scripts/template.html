@@ -130,6 +130,13 @@ table.cov td, table.cov th { border-bottom: 1px solid var(--line); padding: .3re
 .menu button { display: block; width: 100%; text-align: left; border: none; border-radius: 6px; padding: .35rem .5rem; font-size: .88rem; }
 .menu button:hover { background: var(--accent-soft); }
 .menu button small { color: var(--muted); }
+.menu .sel { font: 12px var(--mono); color: var(--muted); padding: 0 .5rem .35rem; max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.menu .lensrow { display: flex; align-items: center; gap: .25rem; padding: .15rem .5rem; font-size: .88rem; }
+.menu .lensrow .name { flex: 1; }
+.menu .lensrow button { display: inline-block; width: auto; padding: .12rem .45rem; font-size: .8rem; border: 1px dashed var(--line); }
+.menu .lensrow button.written { border: 1px solid var(--accent); }
+.menu hr { border: none; border-top: 1px solid var(--line); margin: .3rem 0; }
+.partial-note { border: 1px dashed var(--note-edge); border-radius: 8px; padding: .45rem .6rem; margin: 0 0 .6rem; font-size: .88rem; }
 
 /* code */
 .filetabs { position: sticky; top: 0; z-index: 2; display: flex; gap: .3rem; flex-wrap: wrap; padding: .5rem; background: var(--panel); border-bottom: 1px solid var(--line); }
@@ -181,7 +188,8 @@ table.cov td, table.cov th { border-bottom: 1px solid var(--line); padding: .3re
     <div class="legend">
       <span class="k">◌</span> not visited yet &nbsp; <span class="k">✓</span> accepted &nbsp; <span class="k">⚠</span> needs your decision &nbsp; <span class="k">↺</span> reopened<br>
       Dashed box: unchanged context &nbsp; Blue: tests<br>
-      Lens dots <b>●○○</b>: levels written so far · right-click a lens to jump to a level<br>
+      Lens dots <b>●◐○</b>: written · written for some lines · not yet<br>
+      Right-click a lens tab to jump to a level · right-click a step, a code line or selected code for a lens on just that part<br>
       Keys: <b>←</b>/<b>→</b> step · <b>↑</b>/<b>↓</b> node
     </div>
   </section>
@@ -228,6 +236,12 @@ function writtenLevels(node, lensId) {
   for (let l = 1; l <= MAX_LEVEL; l++) if (lensLevel(node, lensId, l)) out.push(l);
   return out;
 }
+// "partial" = written only for the lines someone asked about, not the whole node
+function levelState(node, lensId, level) {
+  const body = lensLevel(node, lensId, level);
+  return !body ? null : body.partial ? "partial" : "full";
+}
+const LEVEL_MARK = { full: "●", partial: "◐" };
 function highestWritten(node, lensId) { const w = writtenLevels(node, lensId); return w.length ? w[w.length - 1] : 1; }
 function currentContent() { const n = nodesById[state.current]; return n ? lensLevel(n, state.lens, state.level) : null; }
 
@@ -256,10 +270,31 @@ async function copy(text, label) {
     $("explain").insertAdjacentHTML("afterbegin", `<p>Clipboard unavailable. Copy this:</p><textarea class="copybox">${esc(text)}</textarea>`);
   }
 }
+// A scope names exact lines in one file; it may cover added/unchanged (n) and removed (o) lines.
+function scopeText(scope) {
+  const part = (r, removed) => `${removed ? "removed " : ""}line${r[1] !== r[0] ? "s" : ""} ${r[0]}${r[1] !== r[0] ? "–" + r[1] : ""}`;
+  const parts = [scope.n && part(scope.n, false), scope.o && part(scope.o, true)].filter(Boolean);
+  return `${fileName(scope.f)} ${parts.join(" + ")}`;
+}
+function scopeFromKeys(fileKey, keys) {
+  const nums = side => keys.filter(k => k[0] === side).map(k => +k.slice(1));
+  const span = list => list.length ? [Math.min(...list), Math.max(...list)] : undefined;
+  return { f: fileKey, n: span(nums("n")), o: span(nums("o")) };
+}
+function overlaps(a, b) {
+  const meet = (x, y) => x && y && x[0] <= y[1] && y[0] <= x[1];
+  return a.f === b.f && (meet(a.n, b.n) || meet(a.o, b.o));
+}
+// focus is either a note ({h, f, n|o}) or a scope ({scope: true, f, n?, o?, label?, text?})
 function lensRequest(node, lensId, level, focus, unclear) {
   const lens = lensById[lensId];
   let text = `Review ${DATA.meta.id} · ${node.num} ${node.label} · Lens: ${lens.name} · Level ${level} (${lens.levels[level - 1]}). Please write it into the review page.`;
-  if (focus) text += `\nFocus: "${focus.h}" (${rangeText(focus)})`;
+  if (focus && focus.scope) {
+    text += `\nScope: only ${focus.label ? focus.label + ", " : ""}${scopeText(focus)}. Mark the level partial if it isn't written for the whole node.`;
+    if (focus.text) text += `\nSelected code: \`${focus.text.length > 300 ? focus.text.slice(0, 300) + "…" : focus.text}\``;
+  } else if (focus) {
+    text += `\nFocus: "${focus.h}" (${rangeText(focus)})`;
+  }
   if (unclear && unclear.trim()) text += `\nWhat's unclear: ${unclear.trim()}`;
   return text;
 }
@@ -380,8 +415,13 @@ function drawCode() {
   col.querySelectorAll(".ln[data-owner]").forEach(el => {
     el.addEventListener("mouseenter", () => { state.hoverNode = el.dataset.owner || null; drawMap(); });
     el.addEventListener("mouseleave", () => { state.hoverNode = null; drawMap(); });
-    el.addEventListener("click", () => jumpToLine(el.dataset.owner, el.dataset.key));
+    el.addEventListener("click", () => {
+      // finishing a text selection also fires a click; don't jump away from what was just selected
+      if (String(getSelection())) return;
+      jumpToLine(el.dataset.owner, el.dataset.key);
+    });
   });
+  col.querySelector(".code").addEventListener("contextmenu", e => openCodeMenu(e, col));
   col.querySelectorAll("[data-deeper-note]").forEach(b => b.addEventListener("click", () => {
     const nt = content.notes[+b.dataset.deeperNote];
     const next = Math.min(state.level + 1, MAX_LEVEL);
@@ -429,13 +469,12 @@ function drawExplain() {
     <h2>${node.num} ${esc(node.label)}</h2>
     <div class="core"><div><b>Change</b> ${node.core.change}</div><div><b>Risk</b> ${node.core.risk}</div><div><b>Evidence</b> ${node.core.evidence}</div></div>
     <div class="tabs">${DATA.lenses.map(l => {
-      const w = writtenLevels(node, l.id);
-      const dots = Array.from({ length: MAX_LEVEL }, (_, i) => w.includes(i + 1) ? "●" : "○").join("");
+      const dots = Array.from({ length: MAX_LEVEL }, (_, i) => LEVEL_MARK[levelState(node, l.id, i + 1)] || "○").join("");
       return `<button data-lens="${l.id}" class="${state.lens === l.id ? "on" : ""}" title="Right-click to jump to a level">${l.name}${l.id === "risk" && node.decision ? " ⚠" : ""}<span class="dots">${dots}</span></button>`;
     }).join("")}</div>
     <div class="levels">${Array.from({ length: MAX_LEVEL }, (_, i) => i + 1).map(l => {
-      const written = !!lensLevel(node, state.lens, l);
-      return `<button data-level="${l}" class="${l === state.level ? "on" : ""} ${written ? "" : "unwritten"}">L${l}${written ? "" : " ↗"}</button>`;
+      const ls = levelState(node, state.lens, l);
+      return `<button data-level="${l}" class="${l === state.level ? "on" : ""} ${ls ? "" : "unwritten"}">L${l}${ls === "partial" ? " ◐" : ls ? "" : " ↗"}</button>`;
     }).join("")}<span class="desc">${esc(lens.levels[state.level - 1])}</span></div>`;
 
   if (!content) {
@@ -444,6 +483,8 @@ function drawExplain() {
       <p style="margin-top:.5rem"><button id="askBtn" class="primary">Copy request for chat ↗</button></p>
       <p style="color:var(--muted);font-size:.85rem">Paste it into Claude Code. When it's written into the page, refresh (F5). Your progress is kept.</p></div>`;
   } else {
+    if (content.partial) html += `<div class="partial-note">◐ Written for <b>${esc(content.scope || "some lines")}</b> only, not the whole node.
+      <button class="link" id="askWhole">Ask for the whole node ↗</button></div>`;
     if (content.intro) html += `<p class="lens-intro">${content.intro}</p>`;
     if (content.steps) html += renderSteps(node, content.steps);
     if (content.items) html += content.items.map(r => `<div class="risk ${r.lvl}"><h4><span class="tag">${{ warn: "watch", info: "note", assume: "assumption", ok: "fine" }[r.lvl]}</span>${esc(r.h)}</h4>${r.t}</div>`).join("");
@@ -481,6 +522,13 @@ function drawExplain() {
   if (ask) ask.addEventListener("click", () => copy(lensRequest(node, state.lens, state.level, null, $("unclear").value)));
   const deeper = $("deeperBtn");
   if (deeper) deeper.addEventListener("click", () => setLens(state.lens, state.level + 1));
+  const whole = $("askWhole");
+  if (whole) whole.addEventListener("click", () => copy(lensRequest(node, state.lens, state.level)));
+  el.querySelectorAll("[data-step-index]").forEach(div => div.addEventListener("contextmenu", e => {
+    const s = content.steps[+div.dataset.stepIndex];
+    e.preventDefault();
+    openScopedMenu(node, { scope: true, f: s.f, n: s.n, o: s.o, label: `step ${+div.dataset.stepIndex + 1}` }, e.clientX, e.clientY);
+  }));
   const prev = $("prev"), next = $("next"), all = $("toggleAll");
   if (prev) prev.addEventListener("click", stepBack);
   if (next) next.addEventListener("click", stepForward);
@@ -489,10 +537,10 @@ function drawExplain() {
 function renderSteps(node, steps) {
   let html = "";
   if (state.showAll) {
-    html += steps.map((s, i) => `<div class="step ${i === state.step ? "" : "past"}" data-step="${i}">${s.t}</div>`).join("");
+    html += steps.map((s, i) => `<div class="step ${i === state.step ? "" : "past"}" data-step="${i}" data-step-index="${i}">${s.t}</div>`).join("");
   } else {
-    html += steps.slice(0, state.step).map((s, i) => `<div class="step past" data-step="${i}">${s.t}</div>`).join("");
-    html += `<div class="step">${steps[state.step].t}</div>`;
+    html += steps.slice(0, state.step).map((s, i) => `<div class="step past" data-step="${i}" data-step-index="${i}">${s.t}</div>`).join("");
+    html += `<div class="step" data-step-index="${state.step}">${steps[state.step].t}</div>`;
   }
   const last = state.step === steps.length - 1;
   const nextNode = tourOrder[tourOrder.indexOf(node.id) + 1];
@@ -514,6 +562,7 @@ function drawOverview(el) {
     <p>Click a node on the map, or press <b>▶ Guided tour</b>. The code on the right lights up for that node, and the number in the code margin tells you which node each line belongs to. Hover a line to see its node on the map.</p>
     <p>Each lens (Flow, Risk, Syntax, Architecture, Context) has up to three levels. The dots show which levels are written. Click <b>Deeper ↓</b> to go one level further, or right-click a lens to jump straight to a level.
     A level that isn't written yet gives you a request to paste into Claude Code. It then gets written into this page, and you refresh.</p>
+    <p>For just one spot, <b>select some code and right-click</b> it, or right-click a single line or a Flow step. You get every lens and level for exactly those lines. Answers written for only part of a node show as <b>◐</b>.</p>
     ${i.verification ? `<h3>Verification</h3><p>${i.verification}</p>` : ""}
     ${(i.commands || []).map(c => `<pre class="cmd">${esc(c)}</pre>`).join("")}
   </div>`;
@@ -552,6 +601,66 @@ function openLevelMenu(node, lensId, x, y) {
     setLens(lensId, l);
     // an unwritten level is requested straight away, so one right-click is enough
     if (!lensLevel(node, lensId, l)) copy(lensRequest(node, lensId, l), `Request for ${lens.name} level ${l} copied. Paste it into Claude Code.`);
+  }));
+}
+function placeMenu(menu, x, y) {
+  document.body.appendChild(menu);
+  menu.style.left = Math.max(8, Math.min(x, innerWidth - menu.offsetWidth - 8)) + "px";
+  menu.style.top = Math.max(8, Math.min(y, innerHeight - menu.offsetHeight - 8)) + "px";
+}
+
+// ---- scoped lens menu: a code selection, one line, or one step ----
+function openCodeMenu(e, col) {
+  const sel = getSelection();
+  const selectedText = sel && !sel.isCollapsed && col.contains(sel.anchorNode) ? sel.toString().trim() : "";
+  let lines = selectedText ? [...col.querySelectorAll(".ln[data-key]")].filter(el => sel.containsNode(el, true)) : [];
+  if (!lines.length) {
+    const line = e.target.closest(".ln[data-key]");
+    if (line) lines = [line];
+  }
+  if (!lines.length) return; // e.g. right-click on a note: keep the browser's own menu
+  e.preventDefault();
+  const ownerId = lines.map(l => l.dataset.owner).find(Boolean) || state.current;
+  if (!ownerId) { toast("These lines don't belong to a node."); return; }
+  const scope = { scope: true, ...scopeFromKeys(state.file, lines.map(l => l.dataset.key)), text: selectedText };
+  openScopedMenu(nodesById[ownerId], scope, e.clientX, e.clientY);
+}
+function openScopedMenu(node, scope, x, y) {
+  closeMenu();
+  const menu = document.createElement("div");
+  menu.className = "menu";
+  // a lens level counts as written for this scope when one of its notes touches these lines;
+  // Flow and Risk level 1 always cover the whole node
+  const coveredBy = (lensId, level) => {
+    const body = lensLevel(node, lensId, level);
+    if (!body) return null;
+    if (level === 1 && (lensId === "flow" || lensId === "risk")) return { whole: true };
+    const i = (body.notes || []).findIndex(nt => overlaps(nt, scope));
+    if (i >= 0) return { note: i };
+    return body.partial ? null : { whole: true };
+  };
+  let html = `<div class="mh">${node.num} · ${esc(scope.label ? scope.label + " · " : "")}${esc(scopeText(scope))}</div>`;
+  if (scope.text) html += `<div class="sel" title="${esc(scope.text)}">${esc(scope.text)}</div><button data-copy-sel>Copy selection</button><hr>`;
+  html += DATA.lenses.map(lens => `<div class="lensrow"><span class="name">${esc(lens.name)}</span>${
+    lens.levels.map((desc, i) => {
+      const covered = coveredBy(lens.id, i + 1);
+      return `<button data-scope-lens="${lens.id}" data-scope-level="${i + 1}" class="${covered ? "written" : ""}" title="L${i + 1} · ${esc(desc)}${covered ? " · open" : " · ask ↗"}">L${i + 1}${covered ? "" : " ↗"}</button>`;
+    }).join("")}</div>`).join("");
+  menu.innerHTML = html;
+  placeMenu(menu, x, y);
+  const copySel = menu.querySelector("[data-copy-sel]");
+  if (copySel) copySel.addEventListener("click", () => { closeMenu(); copy(scope.text, "Selection copied."); });
+  menu.querySelectorAll("[data-scope-lens]").forEach(b => b.addEventListener("click", () => {
+    const lensId = b.dataset.scopeLens, level = +b.dataset.scopeLevel, lens = lensById[lensId];
+    const covered = coveredBy(lensId, level);
+    closeMenu();
+    if (covered) {
+      if (state.current !== node.id) selectNode(node.id);
+      setLens(lensId, level);
+      if (covered.note !== undefined) scrollToNote(covered.note);
+      return;
+    }
+    copy(lensRequest(node, lensId, level, scope), `Request for ${lens.name} level ${level} on ${scopeText(scope)} copied. Paste it into Claude Code.`);
   }));
 }
 document.addEventListener("click", e => { if (!e.target.closest(".menu")) closeMenu(); });

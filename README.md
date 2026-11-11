@@ -38,6 +38,9 @@ detail on one screen:
 3. Want more depth? Click a lens level marked ↗ (or right-click a lens tab). The
    page copies a request; paste it into the agent's chat. The agent writes the
    answer **into the page**; you refresh (F5). Your progress is kept.
+   For one spot only, **select code and right-click it**, or right-click a single
+   line or a Flow step. You get every lens and level for exactly those lines;
+   answers written for only part of a node show as ◐.
 4. Decide per node. **Copy decisions for chat** sends them back to the agent.
    Change requests lead to a fix; affected nodes get a new revision, and their
    earlier decisions show as ↺ reopened.
