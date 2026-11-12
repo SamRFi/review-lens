@@ -21,7 +21,7 @@ import sys
 from diff_source import changed_files, context_lines, describe, diff_lines
 
 SCRIPTS = pathlib.Path(__file__).parent
-NODE_W, NODE_H, ROW, COLUMN_X, TOP = 152, 54, 74, (6, 196), 12
+NODE_W, NODE_H, ROW, COLUMN_X, TOP = 152, 54, 74, (22, 196), 12
 
 DEFAULT_LENSES = [
     {"id": "flow", "name": "Flow", "levels": ["The main path in tiny steps", "Branches and edge cases", "Exact execution order, including laziness"]},

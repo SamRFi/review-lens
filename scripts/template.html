@@ -55,7 +55,8 @@ main { display: grid; grid-template-columns: 360px minmax(320px, 430px) 1fr; fle
 @media (max-width: 1100px) { main { grid-template-columns: 1fr; height: auto; } .col { max-height: none !important; } }
 .col { overflow: auto; border-right: 1px solid var(--line); max-height: 100%; }
 .col-map { padding: .8rem; }
-.col-explain { padding: 1rem; background: var(--panel); }
+/* long identifiers have no spaces; let them wrap instead of running out of their box */
+.col-explain { padding: 1rem; background: var(--panel); overflow-wrap: anywhere; }
 .col-code { background: var(--code-bg); }
 
 /* map */
@@ -76,7 +77,8 @@ svg.map { width: 100%; height: auto; display: block; }
 .node .badge { font-size: 13px; }
 .edge { stroke: var(--muted); stroke-width: 1.4; fill: none; }
 .edge.proves { stroke-dasharray: 4 4; stroke: var(--info); }
-.edge-label { fill: var(--muted); font-size: 10px; }
+/* a halo in the background colour keeps labels readable where they cross a line */
+.edge-label { fill: var(--muted); font-size: 10px; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round; }
 .legend { font-size: .8rem; color: var(--muted); margin-top: .5rem; line-height: 1.7; }
 .legend .k { display: inline-block; min-width: 1.4em; }
 .tour { margin-top: .8rem; display: flex; gap: .5rem; flex-wrap: wrap; }
@@ -85,7 +87,8 @@ svg.map { width: 100%; height: auto; display: block; }
 .crumb { font-size: .8rem; color: var(--muted); margin-bottom: .3rem; word-break: break-all; }
 h2 { font-size: 1.15rem; margin: 0 0 .6rem; }
 .core { display: grid; gap: .35rem; border: 1px solid var(--line); border-radius: 10px; padding: .6rem .75rem; margin-bottom: .8rem; background: var(--bg); font-size: .9rem; }
-.core div b { display: inline-block; min-width: 5.2em; color: var(--muted); font-weight: 600; }
+.core div { display: grid; grid-template-columns: 5.6em minmax(0, 1fr); column-gap: .4rem; }
+.core div b { color: var(--muted); font-weight: 600; }
 .tabs { display: flex; gap: .3rem; flex-wrap: wrap; margin-bottom: .5rem; }
 .tabs button.on { background: var(--accent-soft); border-color: var(--accent); }
 .tabs .dots { font-size: .6rem; letter-spacing: 1px; margin-left: .35em; color: var(--accent); vertical-align: middle; }
@@ -338,17 +341,51 @@ function drawMap() {
     return { top: [x + NODE_W / 2, y], bottom: [x + NODE_W / 2, y + NODE_H], left: [x, y + NODE_H / 2], right: [x + NODE_W, y + NODE_H / 2] }[side];
   };
   let html = `<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor" style="color:var(--muted)"/></marker></defs>`;
+  // Edges never cross a box: neighbours connect straight (up or down), boxes in different columns
+  // connect through the gutter, and an edge that skips boxes in its column runs along a side lane
+  // (one lane per target, so edges into the same box merge into one trunk).
+  const firstColumnX = Math.min(...DATA.nodes.map(n => n.pos[0]));
+  const between = (na, nb) => DATA.nodes.some(n => n !== na && n !== nb && n.pos[0] === na.pos[0]
+    && n.pos[1] > Math.min(na.pos[1], nb.pos[1]) && n.pos[1] < Math.max(na.pos[1], nb.pos[1]));
+  const laneOf = {};
+  const lane = (na, nb) => {
+    const key = na.pos[0] + ":" + nb.id;
+    if (!(key in laneOf)) laneOf[key] = Object.keys(laneOf).filter(k => k.startsWith(na.pos[0] + ":")).length;
+    const k = laneOf[key];
+    return na.pos[0] === firstColumnX ? na.pos[0] - 6 - 5 * k : na.pos[0] + NODE_W + 3 + 3 * k;
+  };
+  const route = (na, nb) => {
+    if (na.pos[0] === nb.pos[0]) {
+      if (!between(na, nb)) {
+        const down = nb.pos[1] > na.pos[1];
+        const p1 = mid(na, down ? "bottom" : "top"), p2 = mid(nb, down ? "top" : "bottom");
+        return { d: `M${p1[0]},${p1[1]} V${p2[1]}`, label: [p1[0] + 6, (p1[1] + p2[1]) / 2 + 4, "start"] };
+      }
+      const side = na.pos[0] === firstColumnX ? "left" : "right", x = lane(na, nb);
+      const p1 = mid(na, side), p2 = mid(nb, side);
+      const labelY = nb.pos[1] > na.pos[1] ? na.pos[1] + NODE_H + 14 : na.pos[1] - 6;
+      return { d: `M${p1[0]},${p1[1]} H${x} V${p2[1]} H${p2[0]}`, label: [na.pos[0] + 4, labelY, "start"] };
+    }
+    const right = nb.pos[0] > na.pos[0];
+    const p1 = mid(na, right ? "right" : "left"), p2 = mid(nb, right ? "left" : "right");
+    if (p1[1] === p2[1]) return { d: `M${p1[0]},${p1[1]} H${p2[0]}`, label: [(p1[0] + p2[0]) / 2, p1[1] + 16, "middle"] };
+    const gx = (p1[0] + p2[0]) / 2;
+    return { d: `M${p1[0]},${p1[1]} H${gx} V${p2[1]} H${p2[0]}`, label: [gx, (p1[1] + p2[1]) / 2 + 4, "middle"] };
+  };
   for (const [a, b, label] of DATA.edges) {
-    const na = nodesById[a], nb = nodesById[b];
-    const vertical = na.pos[0] === nb.pos[0];
-    const p1 = vertical ? mid(na, "bottom") : mid(na, "left"), p2 = vertical ? mid(nb, "top") : mid(nb, "right");
-    html += `<path class="edge" d="M${p1[0]},${p1[1]} L${p2[0]},${p2[1]}" marker-end="url(#arr)"/>`;
-    if (label) html += `<text class="edge-label" x="${(p1[0] + p2[0]) / 2 + (vertical ? 6 : 0)}" y="${(p1[1] + p2[1]) / 2 + (vertical ? 4 : 16)}" text-anchor="${vertical ? "start" : "middle"}">${label}</text>`;
+    const r = route(nodesById[a], nodesById[b]);
+    html += `<path class="edge" d="${r.d}" marker-end="url(#arr)"/>`;
+    if (label) html += `<text class="edge-label" x="${r.label[0]}" y="${r.label[1]}" text-anchor="${r.label[2]}">${label}</text>`;
   }
   for (const t of DATA.nodes.filter(n => n.proves)) {
     const target = nodesById[t.proves[t.proves.length - 1]];
-    const p1 = mid(t, "left"), p2 = mid(target, "right");
-    html += `<path class="edge proves" d="M${p1[0]},${p1[1]} L${p2[0]},${p2[1]}"/>`;
+    if (target.pos[0] === t.pos[0]) {
+      // same column: a bracket along the right edge, so the line stays on the map and off other boxes
+      const a = mid(t, "right"), b = mid(target, "right"), edge = a[0] + 5;
+      html += `<path class="edge proves" d="M${a[0]},${a[1]} H${edge} V${b[1]} H${b[0]}"/>`;
+    } else {
+      html += `<path class="edge proves" d="${route(t, target).d}"/>`;
+    }
   }
   for (const n of DATA.nodes) {
     const d = decisionOf(n);
@@ -360,16 +397,33 @@ function drawMap() {
     const [x, y] = n.pos;
     html += `<g class="${cls}" data-node="${n.id}" tabindex="0">
       <rect x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" ${n.kind === "context" ? 'stroke-dasharray="5 4"' : ""}/>
-      <text x="${x + 9}" y="${y + 21}"><tspan class="num">${n.num}</tspan> ${esc(n.label.length > 21 ? n.label.slice(0, 20) + "…" : n.label)}</text>
-      <text class="nsub" x="${x + 9}" y="${y + 40}">${esc(n.sub)}</text>
+      <text class="fit" x="${x + 9}" y="${y + 21}"><tspan class="num">${n.num}</tspan> <tspan class="fit-text">${esc(n.label)}</tspan></text>
+      <text class="nsub fit" x="${x + 9}" y="${y + 40}"><tspan class="fit-text">${esc(n.sub)}</tspan></text>
       <text class="badge" x="${x + NODE_W - 18}" y="${y + 40}">${badge}</text>
-      <title>${esc(n.label)}</title></g>`;
+      <title>${esc(n.label)} · ${esc(n.sub)}</title></g>`;
   }
   svg.innerHTML = html;
+  // Shorten text by its rendered width, so long names never spill out of their box.
+  // The badge sits at the right edge, so leave room for it.
+  svg.querySelectorAll("text.fit").forEach(t => fitText(t, NODE_W - 9 - 24));
   svg.querySelectorAll(".node").forEach(g => {
     g.addEventListener("click", () => selectNode(g.dataset.node));
     g.addEventListener("keydown", e => { if (e.key === "Enter") selectNode(g.dataset.node); });
   });
+}
+
+function fitText(textEl, maxWidth) {
+  const part = textEl.querySelector(".fit-text");
+  if (!part || textEl.getComputedTextLength() <= maxWidth) return;
+  const full = part.textContent;
+  let low = 0, high = full.length;
+  // binary search for the longest prefix that still fits with an ellipsis
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    part.textContent = full.slice(0, mid) + "…";
+    if (textEl.getComputedTextLength() <= maxWidth) low = mid; else high = mid - 1;
+  }
+  part.textContent = full.slice(0, low).trimEnd() + "…";
 }
 
 // ---- code panel ----
@@ -467,7 +521,7 @@ function drawExplain() {
 
   let html = `<div class="crumb">${esc(fileList)}</div>
     <h2>${node.num} ${esc(node.label)}</h2>
-    <div class="core"><div><b>Change</b> ${node.core.change}</div><div><b>Risk</b> ${node.core.risk}</div><div><b>Evidence</b> ${node.core.evidence}</div></div>
+    <div class="core"><div><b>Change</b><span>${node.core.change}</span></div><div><b>Risk</b><span>${node.core.risk}</span></div><div><b>Evidence</b><span>${node.core.evidence}</span></div></div>
     <div class="tabs">${DATA.lenses.map(l => {
       const dots = Array.from({ length: MAX_LEVEL }, (_, i) => LEVEL_MARK[levelState(node, l.id, i + 1)] || "○").join("");
       return `<button data-lens="${l.id}" class="${state.lens === l.id ? "on" : ""}" title="Right-click to jump to a level">${l.name}${l.id === "risk" && node.decision ? " ⚠" : ""}<span class="dots">${dots}</span></button>`;
