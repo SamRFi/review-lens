@@ -565,7 +565,7 @@ function drawExplain() {
   });
   el.querySelectorAll("[data-level]").forEach(b => b.addEventListener("click", () => setLens(state.lens, +b.dataset.level)));
   el.querySelectorAll("[data-note]").forEach(li => li.addEventListener("click", () => scrollToNote(+li.dataset.note)));
-  el.querySelectorAll("[data-step]").forEach(b => b.addEventListener("click", () => { state.step = +b.dataset.step; render(); }));
+  el.querySelectorAll("[data-step]").forEach(b => b.addEventListener("click", () => { state.step = +b.dataset.step; state.file = content.steps[state.step].f; render(); }));
   el.querySelectorAll("[data-decide]").forEach(b => b.addEventListener("click", () => {
     const cur = decisionOf(node);
     state.decisions[node.id] = { note: cur.note, status: cur.status === b.dataset.decide ? null : b.dataset.decide, rev: revOf(node) };
