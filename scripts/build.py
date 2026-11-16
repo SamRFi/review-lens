@@ -7,6 +7,7 @@ Refuses (exit 1) when the review would silently miss something:
   - a changed line that no node explains (coverage)
   - a step or note that points at lines that don't exist (dangling)
   - a changed file that is neither reviewed nor listed as unrelated (undeclared)
+  - a "Data in motion" step that cites lines that don't exist, or moves a token that isn't there
 --check also reports STALE when the code changed after the page was built.
 """
 import argparse
@@ -18,6 +19,7 @@ import pathlib
 import re
 import sys
 
+import motion
 from diff_source import changed_files, context_lines, describe, diff_lines
 
 SCRIPTS = pathlib.Path(__file__).parent
@@ -140,6 +142,7 @@ def build(content_path, check):
     problems += [f"POINTS AT NOTHING: {d}" for d in dangling_references(nodes, files)]
     undeclared = undeclared_changes(content)
     problems += [f"UNDECLARED CHANGE (review it or list it under 'unrelated'): {p}" for p in undeclared]
+    problems += [f"MOTION: {m}" for m in motion.validate(content, files)]
 
     if check:
         built = re.search(r'"fingerprint": "([0-9a-f]+)"', out_path.read_text(encoding="utf-8")) if out_path.exists() else None
@@ -149,6 +152,8 @@ def build(content_path, check):
             problems.append("STALE: the code changed after the page was built. Update the affected nodes, bump their 'rev', rebuild.")
         else:
             print("UP TO DATE: the page matches the current code.")
+    elif problems:
+        print(f"NOT WRITTEN: {out_path.name} keeps its previous version until the problems below are fixed.")
     else:
         map_height = layout(nodes)
         data = {
@@ -162,6 +167,7 @@ def build(content_path, check):
             "edges": content.get("edges") or default_edges(nodes),
             "lenses": content.get("lenses", DEFAULT_LENSES), "coverage": coverage,
             "unrelated": content.get("unrelated", []),
+            "motion": motion.resolve(content, files),
         }
         template = (SCRIPTS / "template.html").read_text(encoding="utf-8")
         payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")

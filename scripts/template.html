@@ -12,6 +12,8 @@
   --add: #e6f4e9; --del: #fbe7e6; --step: #fff2b8; --step-edge: #e0b400;
   --note: #eef3fb; --note-edge: #3b6ea8;
   --code-bg: #fbfaf7; --kw: #8a3ea8; --str: #a3521c; --com: #6f8a6f;
+  --m0: #3b6ea8; --m0-soft: #e6eef8; --m1: #7a5aa6; --m1-soft: #efe9f6; --m2: #3d7a6e; --m2-soft: #e2f0ec;
+  --m3: #b7791f; --m3-soft: #fbefd9; --m4: #55606e; --m4-soft: #eceef1; --m5: #a6475f; --m5-soft: #f7e6ea;
   --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
@@ -22,6 +24,8 @@
     --add: #1d3324; --del: #3d2323; --step: #4a4220; --step-edge: #d4b23a;
     --note: #1f2a38; --note-edge: #7fa8dc;
     --code-bg: #1e1f22; --kw: #c99ae0; --str: #e0a473; --com: #84a184;
+    --m0: #7fa8dc; --m0-soft: #1f2a38; --m1: #b49ad8; --m1-soft: #2c2538; --m2: #6fbfae; --m2-soft: #1f3531;
+    --m3: #e2a84a; --m3-soft: #3a2f1c; --m4: #a3adba; --m4-soft: #2a2d31; --m5: #e08aa0; --m5-soft: #3a2229;
   }
 }
 :root[data-theme="dark"] {
@@ -31,6 +35,8 @@
   --add: #1d3324; --del: #3d2323; --step: #4a4220; --step-edge: #d4b23a;
   --note: #1f2a38; --note-edge: #7fa8dc;
   --code-bg: #1e1f22; --kw: #c99ae0; --str: #e0a473; --com: #84a184;
+    --m0: #7fa8dc; --m0-soft: #1f2a38; --m1: #b49ad8; --m1-soft: #2c2538; --m2: #6fbfae; --m2-soft: #1f3531;
+    --m3: #e2a84a; --m3-soft: #3a2f1c; --m4: #a3adba; --m4-soft: #2a2d31; --m5: #e08aa0; --m5-soft: #3a2229;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
@@ -44,7 +50,7 @@ button.primary { background: var(--accent); color: var(--panel); border-color: v
 button.link { border: none; background: none; padding: 0; color: var(--info); text-decoration: underline; font-size: .85em; }
 
 header { display: flex; flex-wrap: wrap; gap: .6rem 1rem; align-items: center; padding: .7rem 1rem; border-bottom: 1px solid var(--line); background: var(--panel); }
-header > div:first-child { min-width: 0; flex: 1 1 320px; }
+header > div:first-child { min-width: 0; flex: 1 1 180px; }
 header h1 { font-size: 1.05rem; margin: 0; }
 header .sub { color: var(--muted); font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 header .spacer { flex: 0; }
@@ -166,6 +172,80 @@ table.cov td, table.cov th { border-bottom: 1px solid var(--line); padding: .3re
 .toast { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: .5rem 1rem; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw; }
 .toast.on { opacity: .95; }
 .copybox { width: 100%; min-height: 6em; font: 12px var(--mono); }
+
+/* ---- Data in motion tab ---- */
+.viewtabs { display: flex; gap: .2rem; }
+.viewtabs button { border-radius: 8px; font-size: .9rem; }
+.viewtabs button.on { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
+.motion { flex: 1; min-height: 0; overflow: auto; }
+.motion[hidden], main[hidden] { display: none; }
+.m-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1.2rem; padding: .8rem 1rem .4rem; }
+.m-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.m-seg button { border: none; border-radius: 0; }
+.m-seg button + button { border-left: 1px solid var(--line); }
+.m-seg button.on { background: var(--accent); color: var(--panel); }
+.m-label { color: var(--muted); font-size: .8rem; margin-right: .3rem; }
+.m-stepper { display: flex; align-items: center; gap: .5rem; }
+.m-stepper .count { min-width: 6.5em; text-align: center; font-size: .9rem; color: var(--muted); }
+.m-stepper input { width: 200px; accent-color: var(--accent); }
+.m-legend { display: flex; flex-wrap: wrap; gap: .4rem 1rem; padding: .2rem 1rem .4rem; font-size: .8rem; color: var(--muted); align-items: center; }
+.m-legend .m-tok { position: static; height: auto; padding: 0 6px 0 10px; display: inline-block; transition: none; font-weight: 600; }
+.m-honest { font-size: .8rem; color: var(--muted); padding: 0 1rem .5rem; margin: 0; }
+.m-stage { padding: 0 1rem; overflow-x: auto; }
+.m-lane { position: relative; min-width: 1100px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-bottom: .7rem; overflow: hidden; }
+.m-lane-name { position: absolute; left: 10px; top: 6px; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); z-index: 3; }
+.m-head { position: absolute; top: 22px; font-size: .8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-head .note { display: block; font-weight: 400; color: var(--muted); font-size: .74rem; min-height: 1.1em; overflow: hidden; text-overflow: ellipsis; }
+.m-head.dead { color: var(--muted); font-weight: 400; font-style: italic; }
+.m-sep { position: absolute; top: 22px; bottom: 0; border-left: 1px dashed var(--line); }
+.m-sep::before { content: "›"; position: absolute; top: -3px; left: -4px; color: var(--muted); background: var(--panel); font-size: .9rem; line-height: 1; }
+.m-active { position: absolute; top: 0; bottom: 0; background: var(--step); opacity: .35; transition: left .45s ease, width .45s ease; }
+.m-tray { position: absolute; left: 0; right: 0; bottom: 0; border-top: 1px dashed var(--line); }
+.m-tray-name { position: absolute; left: 10px; top: 3px; font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.m-tray-label { position: absolute; font-size: .72rem; color: var(--muted); white-space: nowrap; animation: m-fade .4s; }
+.m-frame { position: absolute; border: 1.5px dashed var(--muted); border-radius: 10px; animation: m-fade .4s; }
+.m-hole { position: absolute; border: 1.5px dashed var(--line); border-radius: 8px; color: var(--muted); font-size: .76rem; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 .4rem; }
+/* tokens: colour = entity, shape = role, a label always says what it is */
+.m-tok { position: absolute; left: 0; top: 0; height: 38px; padding: 3px 8px 3px 11px; border-radius: 7px; border: 1.5px solid; font-size: 11.5px; line-height: 15px; overflow: hidden; white-space: nowrap;
+  transition: transform .55s cubic-bezier(.4,.1,.2,1), width .55s, opacity .45s, box-shadow .4s; z-index: 2; color: var(--mc); background: var(--mc-soft); border-color: var(--mc); }
+.m-tok::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--mc); }
+.m-tok .l1 { font-weight: 600; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+.m-tok .l2 { font-family: var(--mono); font-size: 10.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.m-tok .kind { font-weight: 400; color: var(--muted); font-size: 10px; margin-right: 4px; text-transform: uppercase; letter-spacing: .03em; }
+.m-tok.s-record { border-radius: 2px; }
+.m-tok.s-box { border-radius: 2px 12px 2px 2px; }
+.m-tok.s-event { border-radius: 19px; }
+.m-tok.s-message { border-style: double; border-width: 3px; }
+.m-tok.dashed { border-style: dashed; }
+.m-tok.dim { opacity: .38; }
+.m-tok.out { filter: grayscale(.7); }
+.m-tok.out .l1, .m-tok.out .l2 { color: var(--muted); }
+.m-tok.hi { box-shadow: 0 0 0 3px var(--step-edge); }
+.m-tok.flash { animation: m-flash 1.2s ease; }
+.m-tok.merge, .m-tok.gone { opacity: 0; }
+.m-c0 { --mc: var(--m0); --mc-soft: var(--m0-soft); } .m-c1 { --mc: var(--m1); --mc-soft: var(--m1-soft); }
+.m-c2 { --mc: var(--m2); --mc-soft: var(--m2-soft); } .m-c3 { --mc: var(--m3); --mc-soft: var(--m3-soft); }
+.m-c4 { --mc: var(--m4); --mc-soft: var(--m4-soft); } .m-c5 { --mc: var(--m5); --mc-soft: var(--m5-soft); }
+@keyframes m-flash { 0%, 40% { box-shadow: 0 0 0 4px var(--step-edge); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@keyframes m-fade { from { opacity: 0; } to { opacity: 1; } }
+.m-explain { display: grid; gap: 1rem; padding: .3rem 1rem 2rem; }
+.m-explain.two { grid-template-columns: 1fr 1fr; }
+@media (max-width: 1100px) { .m-explain.two { grid-template-columns: 1fr; } }
+.m-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: .8rem 1rem; min-width: 0; }
+.m-card h3 { margin: 0 0 .3rem; font-size: 1rem; }
+.m-card .which { font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.m-card p { margin: .3rem 0 .6rem; }
+.m-ref { margin-top: .5rem; }
+.m-ref summary { cursor: pointer; font-size: .82rem; color: var(--muted); }
+.m-ref summary b { color: var(--ink); font-weight: 600; }
+.m-side { font-size: .7rem; padding: 0 .4em; border-radius: 4px; margin-left: .3em; }
+.m-side.new { background: var(--add); }
+.m-side.old { background: var(--del); }
+.m-ref pre { margin: .3rem 0 0; padding: .4rem 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; font: 12px/1.5 var(--mono); overflow-x: auto; }
+.m-ref pre span { display: block; padding-right: .8rem; white-space: pre; }
+.m-ref pre i { display: inline-block; width: 3.6em; padding-right: .8em; text-align: right; color: var(--muted); user-select: none; font-style: normal; }
+.see-motion { margin: -.3rem 0 .8rem; font-size: .85rem; }
+@media (prefers-reduced-motion: reduce) { .m-tok, .m-active { transition: opacity .2s !important; } .m-tok.flash { animation: none; box-shadow: 0 0 0 3px var(--step-edge); } }
 </style>
 </head>
 <body>
@@ -174,6 +254,7 @@ table.cov td, table.cov th { border-bottom: 1px solid var(--line); padding: .3re
     <h1 id="title"></h1>
     <div class="sub" id="subtitle"></div>
   </div>
+  <nav class="viewtabs" id="viewtabs" hidden><button data-tab="review">Review</button><button data-tab="motion">Data in motion</button></nav>
   <div class="spacer"></div>
   <div class="progress" id="progress"></div>
   <button id="btnOverview">Overview</button>
@@ -186,7 +267,7 @@ table.cov td, table.cov th { border-bottom: 1px solid var(--line); padding: .3re
     <svg class="map" id="map" viewBox="0 0 354 480" role="img" aria-label="Flow map of the change"></svg>
     <div class="tour">
       <button id="btnTour" class="primary">▶ Guided tour</button>
-      <button id="btnReset" title="Forget visited and decisions">Reset</button>
+      <button id="btnReset" title="Forget visited nodes, decisions and where you were">Reset</button>
     </div>
     <div class="legend">
       <span class="k">◌</span> not visited yet &nbsp; <span class="k">✓</span> accepted &nbsp; <span class="k">⚠</span> needs your decision &nbsp; <span class="k">↺</span> reopened<br>
@@ -199,6 +280,7 @@ table.cov td, table.cov th { border-bottom: 1px solid var(--line); padding: .3re
   <section class="col col-explain" id="explain"></section>
   <section class="col col-code" id="codecol"></section>
 </main>
+<section class="motion" id="motion" hidden></section>
 <div class="toast" id="toast"></div>
 <script>
 const DATA = __DATA__;
@@ -219,13 +301,40 @@ function load() {
   try { return JSON.parse(localStorage.getItem(DATA.meta.storageKey)) || {}; } catch { return {}; }
 }
 function save() {
-  try { localStorage.setItem(DATA.meta.storageKey, JSON.stringify({ visited: state.visited, decisions: state.decisions })); } catch {}
+  try {
+    localStorage.setItem(DATA.meta.storageKey, JSON.stringify({ visited: state.visited, decisions: state.decisions,
+      places: state.places, at: { view: state.view, current: state.current }, tab: state.tab, motion: state.motionUi }));
+  } catch {}
 }
 const saved = load();
 const state = {
   current: null, step: 0, lens: "flow", level: 1, showAll: false, file: null, view: "overview",
   visited: saved.visited || {}, decisions: saved.decisions || {}, hoverNode: null,
+  // Where you were, so leaving a lens or node and coming back resumes there:
+  // places[node] = { lens, level, at: { "lens:level": { step, showAll, file, unclear } } }
+  places: saved.places || {},
+  tab: saved.tab || "review", motionUi: { example: null, view: "after", step: 0, ...(saved.motion || {}) },
 };
+
+// ---- remembered places ----
+function placeOf(nodeId) { return state.places[nodeId] || (state.places[nodeId] = { lens: "flow", level: 1, at: {} }); }
+function remember() {
+  if (state.view !== "node" || !state.current) return;
+  const p = placeOf(state.current), key = state.lens + ":" + state.level;
+  p.lens = state.lens; p.level = state.level;
+  p.at[key] = { ...(p.at[key] || {}), step: state.step, showAll: state.showAll, file: state.file };
+  save();
+}
+// Restore the place for the current node's lens and level; content may have changed since, so check it still fits.
+function resumePlace() {
+  const node = nodesById[state.current], c = lensLevel(node, state.lens, state.level);
+  const at = placeOf(node.id).at[state.lens + ":" + state.level] || {};
+  const steps = (c && c.steps) || [];
+  state.step = Math.min(at.step || 0, Math.max(steps.length - 1, 0));
+  state.showAll = !!at.showAll;
+  const first = steps[state.step] || ((c && c.notes) || [])[0];
+  state.file = at.file || (first && first.f) || null;
+}
 
 // ---- lens content ----
 // Flow and Risk level 1 come from the node itself; every other level is written on request.
@@ -465,7 +574,7 @@ function drawCode() {
   }
   html += `</div>`;
   col.innerHTML = html;
-  col.querySelectorAll(".filetabs button").forEach(b => b.addEventListener("click", () => { state.file = b.dataset.file; drawCode(); }));
+  col.querySelectorAll(".filetabs button").forEach(b => b.addEventListener("click", () => { state.file = b.dataset.file; drawCode(); remember(); }));
   col.querySelectorAll(".ln[data-owner]").forEach(el => {
     el.addEventListener("mouseenter", () => { state.hoverNode = el.dataset.owner || null; drawMap(); });
     el.addEventListener("mouseleave", () => { state.hoverNode = null; drawMap(); });
@@ -493,7 +602,7 @@ function jumpToLine(ownerId, key) {
 }
 function scrollToNote(i) {
   const nt = currentContent().notes[i];
-  if (state.file !== nt.f) { state.file = nt.f; drawCode(); }
+  if (state.file !== nt.f) { state.file = nt.f; drawCode(); remember(); }
   const el = $("note-" + i);
   if (!el) return;
   scrollCodeTo(el, 20);
@@ -522,6 +631,7 @@ function drawExplain() {
   let html = `<div class="crumb">${esc(fileList)}</div>
     <h2>${node.num} ${esc(node.label)}</h2>
     <div class="core"><div><b>Change</b><span>${node.core.change}</span></div><div><b>Risk</b><span>${node.core.risk}</span></div><div><b>Evidence</b><span>${node.core.evidence}</span></div></div>
+    ${mStepOfNode(node.id) >= 0 ? `<p class="see-motion"><button class="link" id="seeMotion">▶ See it move: Data in motion, step ${mStepOfNode(node.id) + 1}</button></p>` : ""}
     <div class="tabs">${DATA.lenses.map(l => {
       const dots = Array.from({ length: MAX_LEVEL }, (_, i) => LEVEL_MARK[levelState(node, l.id, i + 1)] || "○").join("");
       return `<button data-lens="${l.id}" class="${state.lens === l.id ? "on" : ""}" title="Right-click to jump to a level">${l.name}${l.id === "risk" && node.decision ? " ⚠" : ""}<span class="dots">${dots}</span></button>`;
@@ -533,7 +643,7 @@ function drawExplain() {
 
   if (!content) {
     html += `<div class="ask"><p><b>${lens.name} level ${state.level}</b> isn't written yet for this node: <i>${esc(lens.levels[state.level - 1])}</i>.</p>
-      <textarea id="unclear" placeholder="What's unclear? (optional, helps aim the answer)"></textarea>
+      <textarea id="unclear" placeholder="What's unclear? (optional, helps aim the answer)">${esc((placeOf(node.id).at[state.lens + ":" + state.level] || {}).unclear || "")}</textarea>
       <p style="margin-top:.5rem"><button id="askBtn" class="primary">Copy request for chat ↗</button></p>
       <p style="color:var(--muted);font-size:.85rem">Paste it into Claude Code. When it's written into the page, refresh (F5). Your progress is kept.</p></div>`;
   } else {
@@ -559,6 +669,8 @@ function drawExplain() {
     <textarea id="note" placeholder="Optional note. Questions and change requests go to chat via 'Copy decisions'.">${esc(d.note || "")}</textarea></div>`;
   el.innerHTML = html;
 
+  const seeMotion = $("seeMotion");
+  if (seeMotion) seeMotion.addEventListener("click", () => { state.motionUi.step = mStepOfNode(node.id); setTab("motion"); });
   el.querySelectorAll("[data-lens]").forEach(b => {
     b.addEventListener("click", () => setLens(b.dataset.lens, highestWritten(node, b.dataset.lens)));
     b.addEventListener("contextmenu", e => { e.preventDefault(); openLevelMenu(node, b.dataset.lens, e.clientX, e.clientY); });
@@ -573,6 +685,10 @@ function drawExplain() {
   }));
   $("note").addEventListener("input", e => { state.decisions[node.id] = { ...(state.decisions[node.id] || {}), note: e.target.value }; save(); });
   const ask = $("askBtn");
+  if (ask) $("unclear").addEventListener("input", e => {
+    const at = placeOf(node.id).at, key = state.lens + ":" + state.level;
+    at[key] = { ...(at[key] || {}), unclear: e.target.value }; save();
+  });
   if (ask) ask.addEventListener("click", () => copy(lensRequest(node, state.lens, state.level, null, $("unclear").value)));
   const deeper = $("deeperBtn");
   if (deeper) deeper.addEventListener("click", () => setLens(state.lens, state.level + 1));
@@ -722,17 +838,24 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu();
 
 // ---- navigation ----
 function setLens(lensId, level) {
-  state.lens = lensId; state.level = level; state.step = 0; state.showAll = false;
-  const node = nodesById[state.current], c = lensLevel(node, lensId, level);
-  const first = c && ((c.steps || [])[0] || (c.notes || [])[0]);
-  if (first) state.file = first.f;
+  remember();
+  state.lens = lensId; state.level = level;
+  resumePlace();
   render();
 }
-function selectNode(id, step = 0, file = null) {
-  state.view = "node"; state.current = id; state.step = step; state.lens = "flow"; state.level = 1; state.showAll = false;
-  state.visited[id] = true; save();
-  const s = nodesById[id].flow[step];
-  state.file = file || (s && s.f) || null;
+// Opens a node where you left it. A code-line click passes an exact Flow step instead.
+function selectNode(id, step = null, file = null) {
+  remember();
+  mStop(); state.tab = "review"; state.view = "node"; state.current = id; state.visited[id] = true;
+  if (step === null) {
+    const p = placeOf(id), ok = lensLevel(nodesById[id], p.lens, p.level);
+    state.lens = ok ? p.lens : "flow"; state.level = ok ? p.level : 1;
+    resumePlace();
+  } else {
+    state.lens = "flow"; state.level = 1; state.step = step; state.showAll = false;
+    const s = nodesById[id].flow[step];
+    state.file = file || (s && s.f) || null;
+  }
   render();
 }
 function stepForward() {
@@ -752,7 +875,15 @@ function progress() {
   const reopened = DATA.nodes.filter(n => decisionOf(n).status === "reopened").length;
   $("progress").innerHTML = `<span><b>${visited}</b>/${total} explored</span><span><b>${decided}</b>/${total} decided</span>${open ? `<span>⚠ <b>${open}</b> open decision</span>` : ""}${reopened ? `<span>↺ <b>${reopened}</b> reopened</span>` : ""}`;
 }
-function render() { drawMap(); drawExplain(); drawCode(); progress(); }
+function render() {
+  const motionTab = !!DATA.motion && state.tab === "motion";
+  $("motion").hidden = !motionTab;
+  document.querySelector("main").hidden = motionTab;
+  document.querySelectorAll("#viewtabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === (motionTab ? "motion" : "review")));
+  if (motionTab) drawMotion();
+  else { drawMap(); drawExplain(); drawCode(); remember(); }
+  progress();
+}
 
 function decisionsText() {
   const label = { reopened: "↺ reopened (code changed since decision)", accepted: "✓ accepted", question: "? question", change: "✎ change requested", deferred: "⏸ deferred", skipped: "↷ skipped" };
@@ -766,18 +897,25 @@ function decisionsText() {
 
 $("title").textContent = DATA.meta.title;
 $("subtitle").title = $("subtitle").textContent = `${DATA.meta.subject} · ${DATA.meta.source} · built ${DATA.meta.built} · diff ${DATA.meta.fingerprint.slice(0, 8)}`;
-$("btnOverview").addEventListener("click", () => { state.view = "overview"; state.current = null; render(); });
-$("btnCoverage").addEventListener("click", () => { state.view = "coverage"; state.current = null; render(); });
+$("btnOverview").addEventListener("click", () => { remember(); state.tab = "review"; state.view = "overview"; state.current = null; render(); save(); });
+$("btnCoverage").addEventListener("click", () => { remember(); state.tab = "review"; state.view = "coverage"; state.current = null; render(); save(); });
 $("btnCopy").addEventListener("click", () => copy(decisionsText(), "Decisions copied. Paste them into Claude Code."));
 $("btnTour").addEventListener("click", () => selectNode(tourOrder[0]));
-$("btnReset").addEventListener("click", () => { if (confirm("Forget visited nodes and decisions?")) { state.visited = {}; state.decisions = {}; save(); render(); } });
+$("btnReset").addEventListener("click", () => { if (confirm("Forget visited nodes, decisions and where you were?")) { state.visited = {}; state.decisions = {}; state.places = {}; save(); render(); } });
 $("btnTheme").addEventListener("click", () => {
   const r = document.documentElement, dark = matchMedia("(prefers-color-scheme: dark)").matches;
   const now = r.dataset.theme || (dark ? "dark" : "light");
   r.dataset.theme = now === "dark" ? "light" : "dark";
 });
 document.addEventListener("keydown", e => {
-  if (e.target.tagName === "TEXTAREA" || !state.current) return;
+  if (e.target.tagName === "TEXTAREA") return;
+  if (DATA.motion && state.tab === "motion") {
+    if (e.key === "ArrowRight") { mStop(); mGo(state.motionUi.step + 1); }
+    else if (e.key === "ArrowLeft") { mStop(); mGo(state.motionUi.step - 1); }
+    else return;
+    e.preventDefault(); return;
+  }
+  if (!state.current) return;
   const i = tourOrder.indexOf(state.current);
   if (e.key === "ArrowRight") stepForward();
   else if (e.key === "ArrowLeft") stepBack();
@@ -786,7 +924,232 @@ document.addEventListener("keydown", e => {
   else return;
   e.preventDefault();
 });
-render();
+
+// ---- data in motion ----
+// A steppable illustration: tokens (one colour per entity, one shape per role) move through columns.
+// Each step is a few actions; the states below are replayed from step 1, per lane and per example.
+const M = DATA.motion;
+const M_VERBS = ["show", "move", "drop", "group", "pick", "merge", "set", "order", "hide"];
+const M_ROW = 44, M_TOP = 66, M_TRAY = 62, M_PAD = 10;
+const mCol = M ? Object.fromEntries(M.columns.map((c, i) => [c.id, i])) : {};
+const mEntity = M ? Object.fromEntries(M.entities.map((e, i) => [e.id, { ...e, c: i % 6 }])) : {};
+const mHasBefore = !!(M && M.steps.some(s => s.before));
+const mLanes = {}, mCache = {};
+let mTimer = null;
+const byExample = (v, ex) => v == null ? "" : typeof v === "string" ? v : (v[ex] ?? v["*"] ?? "");
+const mStepOfNode = id => M ? M.steps.findIndex(s => s.after && s.after.node === id) : -1;
+
+function mStates(lane, ex) {
+  const key = lane + ":" + ex;
+  if (mCache[key]) return mCache[key];
+  const exists = id => { const t = M.tokens[id]; return t && (!t.examples || t.examples.includes(ex)); };
+  const present = new Map();
+  let seq = 0;
+  return mCache[key] = M.steps.map((step, i) => {
+    const body = step[lane] || {};
+    for (const [id, t] of [...present]) if (t.leaving) present.delete(id);
+    const touched = new Set(), pick = new Set(), flash = new Set(), fresh = {};
+    for (const a of body.do || []) {
+      const verb = M_VERBS.find(v => v in a);
+      const ids = verb === "set" ? Object.keys(a.set) : [].concat(a[verb]);
+      for (const id of ids.filter(exists)) {
+        if (verb === "show") {
+          const d = M.tokens[id];
+          present.set(id, { id, entity: d.entity, l1: byExample(d.l1, ex), l2: byExample(d.l2, ex), dashed: d.dashed, col: a.at, seq: seq++ });
+          fresh[id] = a.from || null;
+        }
+        const t = present.get(id);
+        if (!t) continue;
+        touched.add(id);
+        if (verb === "move") Object.assign(t, { col: a.to, tray: false, group: null, seq: seq++ });
+        else if (verb === "drop") Object.assign(t, { col: a.to || t.col, tray: true, reason: byExample(a.reason, ex), group: null, seq: seq++ });
+        else if (verb === "group") t.group = byExample(a.label, ex);
+        else if (verb === "pick") pick.add(id);
+        else if (verb === "merge") { t.into = a.into; t.leaving = true; flash.add(a.into); touched.add(a.into); }
+        else if (verb === "set") {
+          const ch = a.set[id];
+          if ("l1" in ch) t.l1 = byExample(ch.l1, ex);
+          if ("l2" in ch) t.l2 = byExample(ch.l2, ex);
+          if (ch.flash) flash.add(id);
+        }
+        else if (verb === "order") t.seq = seq++;
+        else if (verb === "hide") Object.assign(t, { hidden: true, leaving: true });
+      }
+    }
+    // rows follow arrival order per column; the tray piles what was left behind
+    const all = [...present.values()].sort((a, b) => a.seq - b.seq), rows = {}, trays = {};
+    for (const t of all) {
+      if (t.into || t.hidden) continue;
+      if (t.tray) {
+        const tr = trays[t.col] || (trays[t.col] = { n: 0, reasons: [] });
+        t.row = tr.n++;
+        if (t.reason && !tr.reasons.includes(t.reason)) tr.reasons.push(t.reason);
+      } else t.row = rows[t.col] = (rows[t.col] ?? -1) + 1;
+    }
+    for (const t of all) if (t.into && present.get(t.into)) { const g = present.get(t.into); Object.assign(t, { col: g.col, row: g.row, tray: g.tray }); }
+    const frames = {};
+    for (const t of all) if (t.group && !t.tray && !t.into && !t.hidden) {
+      const f = frames[t.col + "|" + t.group] || (frames[t.col + "|" + t.group] = { col: mCol[t.col], label: t.group, r0: t.row, r1: t.row });
+      f.r0 = Math.min(f.r0, t.row); f.r1 = Math.max(f.r1, t.row);
+    }
+    const activeCols = [...touched].map(id => present.get(id)).filter(Boolean).map(t => mCol[t.col]);
+    return {
+      tokens: all.map(t => ({
+        id: t.id, entity: t.entity, l1: t.l1, l2: t.l2, col: mCol[t.col], row: t.row, tray: !!t.tray, dashed: t.dashed,
+        from: t.id in fresh ? fresh[t.id] : null,
+        cls: pick.has(t.id) ? "hi" : flash.has(t.id) ? "flash" : t.into ? "merge" : t.hidden ? "gone"
+          : t.tray ? "out" : (!touched.has(t.id) && i > 0 ? "dim" : ""),
+      })),
+      frames: Object.values(frames),
+      notes: Object.fromEntries(Object.entries(body.notes || {}).map(([c, v]) => [mCol[c], byExample(v, ex)])),
+      trays: Object.fromEntries(Object.entries(trays).map(([c, tr]) => [mCol[c], tr.reasons.join(" · ")])),
+      active: activeCols.length ? Math.max(...activeCols) : null,
+    };
+  });
+}
+function mLaneSize(lane) {
+  let rows = 0, tray = false;
+  for (const e of M.examples) for (const st of mStates(lane, e.id)) for (const t of st.tokens) {
+    if (t.tray) tray = true; else rows = Math.max(rows, t.row + 1);
+  }
+  return { rows, tray: tray ? M_TRAY : 0 };   // the "Left behind" strip only where something is left behind
+}
+function mLane(lane) {
+  if (mLanes[lane]) return mLanes[lane];
+  const el = document.createElement("div");
+  el.className = "m-lane";
+  const size = mLaneSize(lane);
+  el.style.height = (M_TOP + size.rows * M_ROW + size.tray + 8) + "px";
+  el.innerHTML = `<div class="m-active"></div><span class="m-lane-name">${lane === "after" ? (mHasBefore ? "After · this change" : "This change") : "Before · the old code"}</span>
+    ${size.tray ? `<div class="m-tray" style="height:${size.tray}px"><span class="m-tray-name">Left behind</span></div>` : ""}<div class="m-deco"></div>`;
+  return mLanes[lane] = { lane, el, toks: new Map(), pos: {} };
+}
+function mGeometry(L) {
+  const weights = M.columns.map(c => c.width || 1);
+  const unit = (L.el.clientWidth - 2 * M_PAD) / weights.reduce((a, b) => a + b, 0), xs = [];
+  let acc = M_PAD;
+  for (const w of weights) { xs.push(acc); acc += w * unit; }
+  return { x: c => xs[c], w: c => weights[c] * unit, h: L.el.clientHeight };
+}
+function mPlace(g, t) {
+  if (t.tray) return { x: g.x(t.col) + 8 + t.row * 7, y: g.h - M_TRAY + 20 + t.row * 3, w: g.w(t.col) - 30 };
+  return { x: g.x(t.col) + 6, y: M_TOP + t.row * M_ROW, w: g.w(t.col) - 12 };
+}
+function mDrawLane(L, st) {
+  const g = mGeometry(L), before = L.lane === "before";
+  const heads = M.columns.map((c, i) => {
+    const dead = before && c.before === null;
+    const text = before ? (dead ? "(not in the old code)" : c.before ?? c.after) : c.after;
+    return `<div class="m-head${dead ? " dead" : ""}" style="left:${g.x(i) + 6}px;width:${g.w(i) - 12}px" title="${esc(text)}">${esc(text)}<span class="note">${esc(st.notes[i] || "")}</span></div>`
+      + (i ? `<div class="m-sep" style="left:${g.x(i)}px"></div>` : "")
+      + (dead && c.missing ? `<div class="m-hole" style="left:${g.x(i) + 6}px;top:${M_TOP}px;width:${g.w(i) - 12}px;height:${2 * M_ROW - 6}px">${esc(c.missing)}</div>` : "");
+  }).join("");
+  const frames = st.frames.map(f => `<div class="m-frame" title="${esc(f.label)}" style="left:${g.x(f.col) + 2}px;top:${M_TOP + f.r0 * M_ROW - 4}px;width:${g.w(f.col) - 4}px;height:${(f.r1 - f.r0 + 1) * M_ROW}px"></div>`).join("");
+  const trays = Object.entries(st.trays).map(([c, text]) => `<div class="m-tray-label" style="left:${g.x(+c) + 8}px;top:${g.h - M_TRAY + 3}px">${esc(text)}</div>`).join("");
+  L.el.querySelector(".m-deco").innerHTML = heads + frames + trays;
+  const active = L.el.querySelector(".m-active");
+  active.style.display = st.active == null ? "none" : "";
+  if (st.active != null) { active.style.left = g.x(st.active) + "px"; active.style.width = g.w(st.active) + "px"; }
+
+  // tokens that stay move, new ones fade in from where they come from, the rest fade out
+  const seen = new Set();
+  for (const t of st.tokens) {
+    seen.add(t.id);
+    const p = mPlace(g, t), ent = mEntity[t.entity];
+    let el = L.toks.get(t.id);
+    if (!el) {
+      el = document.createElement("div");
+      L.el.appendChild(el); L.toks.set(t.id, el);
+      const start = t.from && L.pos[t.from] ? L.pos[t.from] : t.from in mCol ? mPlace(g, { col: mCol[t.from], row: 0 }) : p;
+      el.style.transition = "none";
+      el.style.transform = `translate(${start.x}px, ${start.y}px)`; el.style.width = start.w + "px"; el.style.opacity = 0;
+      void el.offsetWidth;
+      el.style.transition = ""; el.style.opacity = "";
+    } else if (/flash/.test(t.cls) && el.classList.contains("flash")) { el.classList.remove("flash"); void el.offsetWidth; }
+    el.className = `m-tok m-c${ent.c} s-${ent.shape || "row"}${t.dashed ? " dashed" : ""} ${t.cls}`;
+    el.innerHTML = `<div class="l1"><span class="kind">${esc(ent.name)}</span>${esc(t.l1)}</div><div class="l2">${esc(t.l2)}</div>`;
+    el.title = `${ent.name}: ${t.l1} · ${t.l2}`;
+    el.style.transform = `translate(${p.x}px, ${p.y}px)` + (/merge/.test(t.cls) ? " scale(.7)" : "");
+    el.style.width = p.w + "px";
+    L.pos[t.id] = p;
+  }
+  for (const [id, el] of L.toks) if (!seen.has(id)) {
+    el.classList.add("gone"); L.toks.delete(id); delete L.pos[id];
+    setTimeout(() => el.remove(), 500);
+  }
+}
+function mCard(lane) {
+  const ex = state.motionUi.example, body = M.steps[state.motionUi.step][lane] || {};
+  const node = body.node && nodesById[body.node];
+  const refs = (body.refs || []).map(r => `<details class="m-ref" open><summary><b>${esc(r.file)}</b> · lines ${r.a}–${r.b}<span class="m-side ${r.side}">${r.side === "new" ? "after" : "before"}</span></summary>`
+    + `<pre>${r.lines.map((l, i) => `<span><i>${r.a + i}</i>${esc(l)}</span>`).join("")}</pre></details>`).join("");
+  return `<div class="m-card"><div class="which">${lane === "after" ? (mHasBefore ? "After · this change" : "This change") : "Before · the old code"}</div>
+    <h3>${body.title || ""}</h3><p>${byExample(body.text, ex)}</p>
+    ${node ? `<p style="font-size:.85rem">In the review: <button class="link" data-goto-node="${node.id}">${node.num} ${esc(node.label)}</button></p>` : ""}
+    ${refs || `<p style="color:var(--muted);font-size:.85rem">${esc(byExample(body.none, ex))}</p>`}</div>`;
+}
+function mShell() {
+  const sec = $("motion");
+  const examples = M.examples.length > 1 ? `<div><span class="m-label">Example</span><span class="m-seg">${M.examples.map(e => `<button data-ex="${e.id}">${esc(e.label || e.id)}</button>`).join("")}</span></div>` : "";
+  const views = mHasBefore ? `<div><span class="m-label">Code</span><span class="m-seg"><button data-mview="after">After</button><button data-mview="before">Before</button><button data-mview="compare">Before vs After</button></span></div>` : "";
+  const legend = M.entities.map((e, i) => `<span class="m-tok m-c${i % 6} s-${e.shape || "row"}">${esc(e.name)}</span>`).join("");
+  sec.innerHTML = `<div class="m-controls">${examples}${views}
+      <div class="m-stepper"><button id="mPrev" title="Previous (←)">←</button><span class="count" id="mCount"></span><button id="mNext" title="Next (→)">→</button>
+      <button id="mPlay" title="Play from here">▶</button><input type="range" id="mScrub" min="0" max="${M.steps.length - 1}" step="1" aria-label="Step"></div></div>
+    <div class="m-legend">${legend}<span>${M.legend ? esc(M.legend) + " · " : ""}yellow ring: what this step decides</span></div>
+    <p class="m-honest">An illustration of the code with example data. The page doesn't run code; every step names the exact lines it shows.</p>
+    <div class="m-stage" id="mStage"></div><div class="m-explain" id="mExplain"></div>`;
+  $("mPrev").onclick = () => { mStop(); mGo(state.motionUi.step - 1); };
+  $("mNext").onclick = () => { mStop(); mGo(state.motionUi.step + 1); };
+  $("mScrub").oninput = e => { mStop(); mGo(+e.target.value); };
+  $("mPlay").onclick = () => {
+    if (mTimer) { mStop(); drawMotion(); return; }
+    if (state.motionUi.step >= M.steps.length - 1) state.motionUi.step = -1;
+    mTimer = setInterval(() => { if (state.motionUi.step >= M.steps.length - 1) { mStop(); drawMotion(); } else mGo(state.motionUi.step + 1); }, 2400);
+    mGo(state.motionUi.step + 1);
+  };
+  sec.querySelectorAll("[data-ex]").forEach(b => b.onclick = () => { state.motionUi.example = b.dataset.ex; drawMotion(); save(); });
+  sec.querySelectorAll("[data-mview]").forEach(b => b.onclick = () => { state.motionUi.view = b.dataset.mview; drawMotion(); save(); });
+  sec.dataset.built = "1";
+}
+function mGo(i) { state.motionUi.step = Math.max(0, Math.min(M.steps.length - 1, i)); drawMotion(); save(); }
+function mStop() { clearInterval(mTimer); mTimer = null; }
+function drawMotion() {
+  const ui = state.motionUi;
+  if (!M.examples.some(e => e.id === ui.example)) ui.example = M.examples[0].id;
+  if (!mHasBefore || !["after", "before", "compare"].includes(ui.view)) ui.view = "after";
+  ui.step = Math.max(0, Math.min(M.steps.length - 1, ui.step || 0));
+  if (!$("motion").dataset.built) mShell();
+  const lanes = ui.view === "compare" ? ["before", "after"] : [ui.view], stage = $("mStage");
+  for (const l of ["before", "after"]) if (!lanes.includes(l) && mLanes[l]) { mLanes[l].el.remove(); delete mLanes[l]; }
+  lanes.forEach((l, i) => { const L = mLane(l); if (stage.children[i] !== L.el) stage.insertBefore(L.el, stage.children[i] || null); });
+  lanes.forEach(l => mDrawLane(mLanes[l], mStates(l, ui.example)[ui.step]));
+  const ex = $("mExplain");
+  ex.className = "m-explain" + (lanes.length === 2 ? " two" : "");
+  ex.innerHTML = lanes.map(mCard).join("");
+  ex.querySelectorAll("[data-goto-node]").forEach(b => b.onclick = () => selectNode(b.dataset.gotoNode));
+  document.querySelectorAll("[data-ex]").forEach(b => b.classList.toggle("on", b.dataset.ex === ui.example));
+  document.querySelectorAll("[data-mview]").forEach(b => b.classList.toggle("on", b.dataset.mview === ui.view));
+  $("mCount").textContent = `step ${ui.step + 1} of ${M.steps.length}`;
+  $("mPrev").disabled = ui.step === 0; $("mNext").disabled = ui.step === M.steps.length - 1;
+  $("mScrub").value = ui.step;
+  $("mPlay").textContent = mTimer ? "❚❚" : "▶";
+}
+function setTab(tab) {
+  if (tab !== "motion") mStop();
+  state.tab = M ? tab : "review";
+  render(); save();
+}
+if (M) {
+  $("viewtabs").hidden = false;
+  document.querySelectorAll("#viewtabs button").forEach(b => b.onclick = () => setTab(b.dataset.tab));
+  addEventListener("resize", () => { if (state.tab === "motion") drawMotion(); });
+}
+
+// After a refresh (F5), come back to where you were.
+if (saved.at && saved.at.view === "node" && nodesById[saved.at.current]) selectNode(saved.at.current);
+else { if (saved.at && saved.at.view === "coverage") state.view = "coverage"; render(); }
+if (M && saved.tab === "motion") setTab("motion");
 </script>
 </body>
 </html>

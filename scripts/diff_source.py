@@ -85,6 +85,24 @@ def context_lines(repo, source, path, first, last):
     return [{"t": "ctx", "n": i, "s": body[i - 1]} for i in range(first, last + 1)]
 
 
+def file_version(repo, source, path, side):
+    """A whole file as it is after ("new") or before ("old") the reviewed change; None when it doesn't exist."""
+    kind = source["type"]
+    if kind == "commit":
+        rev = source["commit"] if side == "new" else source["commit"] + "^"
+    elif kind == "range":
+        rev = source["head"] if side == "new" else source["base"]
+    else:
+        rev = None if side == "new" else source.get("base", "HEAD")
+    try:
+        lines = read_disk(repo, path) if rev is None else git(repo, "show", f"{rev}:{path}").splitlines()
+    except (GitError, OSError):
+        return None
+    if lines and lines[0].startswith("\ufeff"):
+        lines[0] = lines[0][1:]
+    return lines
+
+
 def changed_files(repo, source):
     """Every file the source changes, so a review can't silently leave one out."""
     kind = source["type"]

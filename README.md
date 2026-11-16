@@ -12,6 +12,8 @@ step (accept, question, change, defer, skip), and paste your decisions back into
 
 ![Syntax lens: notes sit just above the exact lines they explain](docs/syntax-lens.png)
 
+![Data in motion: the same invoice lines through the old and the new code, step by step](docs/data-in-motion.png)
+
 ## Why
 
 Reviewing an agent's work in chat tends to become either a wall of code or a
@@ -24,6 +26,9 @@ detail on one screen:
   behind a deeper lens.
 - **Depth is on demand.** Flow and Risk level 1 are written up front. Everything
   else, up to three levels per lens, is written when you ask for it.
+- **Watch the data move (optional).** For changes where data flows or changes shape, a second
+  tab shows it moving through the change, step by step, with the exact lines of every step.
+  Try a second example for the edge case, or put the old and the new code side by side.
 - **Nothing is silently skipped.** The build refuses to produce a page if a changed
   line belongs to no node, or if a changed file is neither reviewed nor declared
   unrelated. `--check` tells you when the code changed after the page was built.
@@ -41,10 +46,12 @@ detail on one screen:
    For one spot only, **select code and right-click it**, or right-click a single
    line or a Flow step. You get every lens and level for exactly those lines;
    answers written for only part of a node show as ◐.
-4. Decide per node. **Copy decisions for chat** sends them back to the agent.
+4. For data-heavy changes, open **Data in motion** to watch an example travel through the
+   change, in the new code or next to the old one. Each step links to its node.
+5. Decide per node. **Copy decisions for chat** sends them back to the agent.
    Change requests lead to a fix; affected nodes get a new revision, and their
    earlier decisions show as ↺ reopened.
-5. Commit-ready means: `--check` is up to date, every node is decided, and
+6. Commit-ready means: `--check` is up to date, every node is decided, and
    verification ran (or its limits were accepted).
 
 ## Requirements
@@ -144,6 +151,7 @@ SKILL.md                     instructions the agent follows
 reference/content-format.md  the content.json format
 scripts/build.py             builds the page and checks coverage and staleness
 scripts/diff_source.py       reads diffs and files from git or disk
+scripts/motion.py            checks the "Data in motion" steps and attaches their code
 scripts/template.html        the page itself (no external dependencies)
 docs/                        screenshots
 ```

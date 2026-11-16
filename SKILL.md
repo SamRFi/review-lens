@@ -82,6 +82,24 @@ requests, discussion and decisions. Nothing is uploaded: the page and its data s
 - Verify version-sensitive or runtime claims (library docs, source) before writing them, and state
   what you checked, e.g. which package version's docs.
 
+## Data in motion (optional second tab)
+
+For a change where data moves or changes shape (syncs, imports, mappings, messages, EDI), add a
+`motion` section (format: `reference/content-format.md`). It shows tokens moving through the
+change step by step, with the exact lines of each step. Skip it for control-flow changes and
+refactors; a review without it simply has no second tab.
+
+- **Calm and abstract.** Colour is the entity, shape is its role, a label always says what it is.
+  At most about five entities. Never cute, never game-like.
+- **Every step is a stable state the user steps to,** never a movie. One idea per step, in runtime
+  order, linked to its node (`node`). Name the exact lines (`refs`), or say why there are none (`none`).
+- **Use the review's own example** (the overview's `example`), with real-looking values. Add a
+  second example for the revealing edge case, and show what gets left behind (`drop` with a reason).
+- **Before vs After** when the old behaviour matters: the same input through the old code
+  (`"o"` line numbers) and the new code. Make the difference visible, not just described.
+- It's an illustration, not an execution: only show behaviour you verified in the code. The build
+  refuses the page when a step cites missing lines or moves a token that isn't there.
+
 ## Requests from the page
 
 The page copies requests to the clipboard; the user pastes them into chat.
